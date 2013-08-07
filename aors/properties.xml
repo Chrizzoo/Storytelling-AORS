@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties
+  SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+   <comment>This is the property file for the AOR simulator.</comment>
+   <entry key="logger file name">output.xml</entry>
+   <entry key="lastUserDir">E:\Repos\AOR-JavaSim-0_8_3b\distribution\projects\Management</entry>
+   <entry key="logger">2</entry>
+   <entry key="auto multithreading">false</entry>
+   <entry key="logger path">.</entry>
+</properties>

@@ -4,7 +4,7 @@
 	xmlns:aors="http://aor-simulation.org" xmlns:dc="http://purl.org/dc/elements/1.1/"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://aor-simulation.org distribution/ext/aorsl/AORSL-0-8-3.xsd"
-	version="0.8.3" simulationManagerDirectory="distribution" scenarioName="Juveniles1"
+	version="0.8.3" simulationManagerDirectory="aors" scenarioName="Juveniles1"
 	scenarioTitle="Juveniles Scenario 1">
 
 	<SimulationParameters simulationSteps="10000" />
