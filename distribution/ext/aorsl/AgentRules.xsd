@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<xs:schema
-	xmlns:ers="http://aor-simulation.org"
-	xmlns:aors="http://aor-simulation.org"
-	xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://aor-simulation.org"
-	elementFormDefault="qualified"
-	attributeFormDefault="unqualified">
+<?xml-stylesheet type="text/xsl" href="ersl/refman/refman.xsl"?>
+<xs:schema xmlns:ers="http://aor-simulation.org" xmlns:aors="http://aor-simulation.org"
+	xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://aor-simulation.org"
+	elementFormDefault="qualified" attributeFormDefault="unqualified">
 	<!-- =================================================================== -->
 	<xs:include schemaLocation="Agents.xsd"/>
 	<!-- =================================================================== -->
-	<xs:redefine schemaLocation="ersl/Rules.xsd">
-	<!-- =================================================================== -->
+	<xs:redefine schemaLocation="ERSL/Rules.xsd">
+		<!-- =================================================================== -->
 		<xs:complexType name="TriggeringAtomicEventExpr.type">
-		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+			<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 			<xs:complexContent>
 				<xs:extension base="ers:TriggeringAtomicEventExpr.type">
 					<xs:attribute name="messageType" type="ers:CanonicalName" use="optional">
@@ -30,7 +27,7 @@
 		</xs:complexType>
 		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:complexType name="ResEnvEvtExpr.type">
-		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+			<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 			<xs:complexContent>
 				<xs:extension base="ers:ResEnvEvtExpr.type">
 					<xs:sequence>
@@ -41,7 +38,8 @@
 							<xs:complexType>
 								<xs:sequence>
 									<xs:element ref="ers:Condition" minOccurs="0" maxOccurs="unbounded"/>
-									<xs:element name="PerceiverIdRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+									<xs:element name="PerceiverIdRef" type="ers:OpaqueExpression" minOccurs="0"
+										maxOccurs="unbounded"/>
 									<xs:element ref="ers:Delay" minOccurs="0" maxOccurs="unbounded"/>
 									<xs:element ref="ers:Slot" minOccurs="0" maxOccurs="unbounded"/>
 								</xs:sequence>
@@ -54,8 +52,10 @@
 							<xs:complexType>
 								<xs:sequence>
 									<xs:element ref="ers:Condition" minOccurs="0" maxOccurs="unbounded"/>
-									<xs:element name="SenderIdRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
-									<xs:element name="ReceiverIdRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+									<xs:element name="SenderIdRef" type="ers:OpaqueExpression" minOccurs="0"
+										maxOccurs="unbounded"/>
+									<xs:element name="ReceiverIdRef" type="ers:OpaqueExpression" minOccurs="0"
+										maxOccurs="unbounded"/>
 									<xs:element ref="ers:Delay" minOccurs="0" maxOccurs="unbounded"/>
 									<xs:element ref="ers:Slot" minOccurs="0" maxOccurs="unbounded"/>
 								</xs:sequence>
@@ -69,9 +69,12 @@
 							<xs:complexType>
 								<xs:sequence>
 									<xs:element ref="ers:Condition" minOccurs="0" maxOccurs="unbounded"/>
-									<xs:element name="CorrelationValue" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
-									<xs:element name="ActorRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
-									<xs:element name="ActorIdRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+									<xs:element name="CorrelationValue" type="ers:OpaqueExpression" minOccurs="0"
+										maxOccurs="unbounded"/>
+									<xs:element name="ActorRef" type="ers:OpaqueExpression" minOccurs="0"
+										maxOccurs="unbounded"/>
+									<xs:element name="ActorIdRef" type="ers:OpaqueExpression" minOccurs="0"
+										maxOccurs="unbounded"/>
 									<xs:element ref="ers:Delay" minOccurs="0" maxOccurs="unbounded"/>
 								</xs:sequence>
 								<xs:attribute name="activityType" type="ers:CanonicalName" use="required"/>
@@ -84,7 +87,8 @@
 							<xs:complexType>
 								<xs:sequence>
 									<xs:element ref="ers:Condition" minOccurs="0" maxOccurs="unbounded"/>
-									<xs:element name="CorrelationValue" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+									<xs:element name="CorrelationValue" type="ers:OpaqueExpression" minOccurs="0"
+										maxOccurs="unbounded"/>
 									<xs:element ref="ers:Delay" minOccurs="0" maxOccurs="unbounded"/>
 								</xs:sequence>
 								<xs:attribute name="activityType" type="ers:CanonicalName" use="required"/>
@@ -97,45 +101,8 @@
 			</xs:complexContent>
 		</xs:complexType>
 	</xs:redefine>
-	<!-- ==================================================================== -->
-	<xs:element name="CommunicationRule">
-	<!-- ==================================================================== -->
-		<xs:complexType>
-			<xs:sequence>
-				<xs:element ref="ers:documentation" minOccurs="0"/>
-				<xs:choice>
-					<xs:element name="WHEN" type="aors:TriggeringCommunicationRuleEventExpr.type"/>
-					<xs:element ref="ers:ON-EACH-SIMULATION-STEP"/>
-				</xs:choice>
-				<xs:choice minOccurs="0" maxOccurs="unbounded">
-					<xs:element name="FOR" type="aors:DataVariable-OR-BeliefEntityVariable-Declaration.type" minOccurs="0" maxOccurs="unbounded"/>
-					<xs:element name="FOR-ListItemVariable" type="aors:FOR-AgentRuleListItemVariable.type" minOccurs="0" maxOccurs="unbounded"/>
-				</xs:choice>
-				<xs:element name="DO" type="aors:CommRuleDO.type" minOccurs="0"/>	
-				<xs:sequence minOccurs="0">
-					<xs:element ref="ers:IF" maxOccurs="unbounded"/>
-					<xs:element name="THEN" type="aors:CommRuleDO.type"/>
-					<xs:element name="ELSE" type="aors:CommRuleDO.type" minOccurs="0"/>
-				</xs:sequence>
-			</xs:sequence>
-			<xs:attribute name="name" type="ers:CanonicalName" use="required"/>
-			<xs:attribute name="agentVariable" type="ers:CanonicalName" use="optional"/>
-		</xs:complexType>
-	</xs:element>
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-	<xs:complexType name="TriggeringCommunicationRuleEventExpr.type">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-		<xs:complexContent>
-			<xs:extension base="aors:TriggeringAtomicEventExpr.type">
-				<xs:attribute name="reminderMsg" type="ers:CanonicalName" use="optional">
-					<xs:annotation>
-						<xs:documentation>Reminder message is only allowed for eventType="ReminderEvent".</xs:documentation>
-					</xs:annotation>
-				</xs:attribute>
-			</xs:extension>
-		</xs:complexContent>
-	</xs:complexType>
-<!-- 
+	<xs:element name="ELSE-IF" type="ers:Condition.type"/>
+	<!-- 
 	<xs:group name="AgentRule.sharedElements">
 		<xs:sequence>
 			<xs:element ref="ers:documentation" minOccurs="0"/>
@@ -147,21 +114,15 @@
 		</xs:sequence>
 	</xs:group>
 -->
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-	<xs:complexType name="CommRuleDO.type">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-		<xs:sequence>
-			<xs:element ref="aors:UPDATE-AGT" minOccurs="0"/>
-			<xs:element name="SCHEDULE-EVT" type="aors:CommRuleResEvtExpr.type" minOccurs="0"/>
-		</xs:sequence>
-	</xs:complexType>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<xs:complexType name="DataVariable-OR-BeliefEntityVariable-Declaration.type">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:sequence>
 			<xs:element ref="ers:ValueExpr" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="BeliefEntityIdRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="BeliefEntityType" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="BeliefEntityIdRef" type="ers:OpaqueExpression" minOccurs="0"
+				maxOccurs="unbounded"/>
+			<xs:element name="BeliefEntityType" type="ers:OpaqueExpression" minOccurs="0"
+				maxOccurs="unbounded"/>
 		</xs:sequence>
 		<xs:attribute name="dataVariable" type="ers:CanonicalName" use="optional"/>
 		<xs:attribute name="dataType" type="ers:PrimitiveDataType" use="optional"/>
@@ -172,7 +133,7 @@
 	</xs:complexType>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<xs:complexType name="FOR-AgentRuleListItemVariable.type">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:sequence>
 			<xs:element name="ListExpr" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>
@@ -182,72 +143,71 @@
 	</xs:complexType>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<xs:element name="CreateDescription">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:complexType>
 			<xs:attribute name="descriptionVariable" type="ers:CanonicalName" use="required"/>
 			<xs:attribute name="beliefEntityVariable" type="ers:CanonicalName" use="required"/>
 			<xs:attribute name="properties" type="ers:ListOfCanonicalName" use="optional"/>
 		</xs:complexType>
 	</xs:element>
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-	<!-- *** SCHEDULE-EVT for Communication Rules *** -->
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-	<xs:complexType name="CommRuleResEvtExpr.type">
+	<!-- ==================================================================== -->
+	<xs:element name="ReactionRule" type="aors:ReactionRule.type"/>
+	<!-- ==================================================================== -->
+	<xs:complexType name="ReactionRule.type">
 		<xs:sequence>
-			<xs:element ref="aors:CreateDescription" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element ref="aors:OutMessageEventExpr" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element ref="aors:ReminderEventExpr" minOccurs="0" maxOccurs="unbounded"/>
-		</xs:sequence>
-	</xs:complexType>
-	<!-- ==================================================================== -->
-	<xs:element name="ReactionRule">
-	<!-- ==================================================================== -->
-		<xs:complexType>
-			<xs:sequence>
-				<xs:element ref="ers:documentation" minOccurs="0"/>
-				<xs:choice>
-					<xs:element name="WHEN" type="aors:TriggeringAgentRuleEventExpr.type"/>
-					<xs:element ref="ers:ON-EACH-SIMULATION-STEP"/>
-				</xs:choice>
-				<xs:choice minOccurs="0" maxOccurs="unbounded">
-					<xs:element name="FOR" type="aors:DataVariable-OR-BeliefEntityVariable-Declaration.type" minOccurs="0" maxOccurs="unbounded"/>
-					<xs:element name="FOR-ListItemVariable" type="aors:FOR-AgentRuleListItemVariable.type" minOccurs="0" maxOccurs="unbounded"/>
-				</xs:choice>
-				<xs:element name="DO" type="aors:AgtRuleDO.type" minOccurs="0"/>	
-				<xs:sequence minOccurs="0">
-					<xs:element ref="ers:IF" maxOccurs="unbounded"/>
-					<xs:element name="THEN" type="aors:AgtRuleDO.type"/>
-					<xs:element name="ELSE" type="aors:AgtRuleDO.type" minOccurs="0"/>
-				</xs:sequence>
+			<xs:element name="documentation" type="ers:BasicDocumentation.type" minOccurs="0"/>
+			<xs:choice>
+				<xs:element name="WHEN" type="aors:TriggeringAgentRuleEventExpr.type"/>
+				<xs:element ref="ers:ON-EACH-SIMULATION-STEP"/>
+			</xs:choice>
+			<xs:choice minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="FOR" type="aors:DataVariable-OR-BeliefEntityVariable-Declaration.type"
+					minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="FOR-ListItemVariable" type="aors:FOR-AgentRuleListItemVariable.type"
+					minOccurs="0" maxOccurs="unbounded"/>
+			</xs:choice>
+			<xs:element name="DO" type="aors:AgtRuleDO.type" minOccurs="0"/>
+			<xs:sequence minOccurs="0">
+				<xs:element ref="ers:IF" maxOccurs="unbounded"/>
+				<xs:element name="THEN" type="aors:AgtRuleDO.type"/>
+				<xs:element name="ELSE" type="aors:AgtRuleDO.type" minOccurs="0"/>
 			</xs:sequence>
-			<xs:attribute name="name" type="ers:CanonicalName" use="required"/>
-			<xs:attribute name="agentVariable" type="ers:CanonicalName" use="optional"/>
-		  <xs:attribute name="useActionRules" type="xs:boolean" default="false"/>
-		  <xs:attribute name="useRollback" type="xs:boolean" default="true"/>
-		</xs:complexType>
-	</xs:element>
+		</xs:sequence>
+		<xs:attribute name="name" type="ers:CanonicalName" use="required"/>
+		<xs:attribute name="agentVariable" type="ers:CanonicalName" use="optional"/>
+	</xs:complexType>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<xs:complexType name="TriggeringAgentRuleEventExpr.type">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:complexContent>
-			<xs:extension base="aors:TriggeringCommunicationRuleEventExpr.type">
-				<xs:attribute name="physicalObjectType" type="ers:CanonicalName" use="optional">
-					<xs:annotation>
-						<xs:documentation>Physical object type is only allowed for eventType="PhysicalObjectPerceptionEvent".</xs:documentation>
-					</xs:annotation>
-				</xs:attribute>
-			</xs:extension>
+		  <xs:extension base="aors:TriggeringAtomicEventExpr.type">
+		    <xs:attribute name="reminderMsg" type="ers:CanonicalName" use="optional">
+		      <xs:annotation>
+		        <xs:documentation>The reminderMsg attribute must only be used in case eventType="ReminderEvent".</xs:documentation>
+		      </xs:annotation>
+		    </xs:attribute>
+		    <xs:attribute name="physicalObjectType" type="aors:JavaTypeName" use="optional">
+		      <xs:annotation>
+		      	<xs:documentation>The physicalObjectType attribute must only be used in case eventType="PhysicalObjectPerceptionEvent".</xs:documentation>
+		      </xs:annotation>
+		    </xs:attribute>
+		  	<xs:attribute name="perceivedObjectVariable" type="ers:CanonicalName" use="optional">
+		  		<xs:annotation>
+		  			<xs:documentation>The perceivedObjectVariable attribute must only be used in case eventType="PhysicalObjectPerceptionEvent".</xs:documentation>
+		  		</xs:annotation>
+		  	</xs:attribute>
+		  </xs:extension>		  
 		</xs:complexContent>
 	</xs:complexType>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<xs:complexType name="AgtRuleDO.type">
-  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:sequence>
 			<xs:element ref="aors:UPDATE-AGT" minOccurs="0"/>
 			<xs:element name="SCHEDULE-EVT" type="aors:AgtRuleResEvtExpr.type" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
-  <!-- ==================================================================== -->
+	<!-- ==================================================================== -->
 	<!-- *** SCHEDULE-EVT for Physical Agent Rules *** -->
 	<!-- ==================================================================== -->
 	<xs:complexType name="AgtRuleResEvtExpr.type">
@@ -277,7 +237,8 @@
 		<xs:complexType>
 			<xs:sequence>
 				<xs:element ref="ers:Condition" minOccurs="0" maxOccurs="unbounded"/>
-				<xs:element name="ReceiverIdRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="ReceiverIdRef" type="ers:OpaqueExpression" minOccurs="0"
+					maxOccurs="unbounded"/>
 				<xs:element ref="ers:Delay" minOccurs="0" maxOccurs="unbounded"/>
 				<xs:element ref="ers:Slot" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
@@ -291,7 +252,8 @@
 		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="ReminderMsg" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="ReminderMsg" type="ers:OpaqueExpression" minOccurs="0"
+					maxOccurs="unbounded"/>
 				<xs:element ref="ers:Condition" minOccurs="0" maxOccurs="unbounded"/>
 				<xs:element ref="ers:Delay" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
@@ -305,6 +267,8 @@
 	<xs:complexType name="UpdateSubjectiveStateExpr.type">
 		<xs:choice minOccurs="0" maxOccurs="unbounded">
 			<xs:element ref="ers:Slot"/>
+			<xs:element ref="ers:MultiValuedSlot"/>
+			<xs:element ref="ers:Call"/>
 			<xs:element ref="aors:UpdateComplexDataPropertyValue"/>
 			<xs:element ref="aors:SelfBeliefSlot"/>
 			<xs:element ref="aors:CreateBeliefEntity"/>
@@ -314,7 +278,7 @@
 	</xs:complexType>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<xs:element name="UpdateComplexDataPropertyValue">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:complexType>
 			<xs:sequence>
 				<xs:element name="Argument" minOccurs="0" maxOccurs="unbounded">
@@ -343,8 +307,10 @@
 		</xs:annotation>
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="BeliefEntityIdRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
-				<xs:element name="BeliefEntityType" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="BeliefEntityIdRef" type="ers:OpaqueExpression" minOccurs="0"
+					maxOccurs="unbounded"/>
+				<xs:element name="BeliefEntityType" type="ers:OpaqueExpression" minOccurs="0"
+					maxOccurs="unbounded"/>
 				<xs:element ref="aors:BeliefSlot" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
 			<xs:attribute name="beliefEntityType" type="ers:CanonicalName" use="optional"/>
@@ -352,25 +318,27 @@
 	</xs:element>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<xs:element name="UpdateBeliefEntity">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="BeliefEntityIdRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="BeliefEntityIdRef" type="ers:OpaqueExpression" minOccurs="0"
+					maxOccurs="unbounded"/>
 				<xs:element ref="aors:BeliefSlot" minOccurs="0" maxOccurs="unbounded"/>
 				<xs:element ref="ers:Increment" minOccurs="0" maxOccurs="unbounded"/>
 				<xs:element ref="ers:Decrement" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
-		  <xs:attribute name="beliefEntityType" type="ers:CanonicalName" use="required"/>
+			<xs:attribute name="beliefEntityType" type="ers:CanonicalName" use="required"/>
 			<xs:attribute name="beliefEntityIdRef" type="xs:long" use="optional"/>
 			<xs:attribute name="beliefEntityVariable" type="ers:CanonicalName" use="optional"/>
 		</xs:complexType>
 	</xs:element>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<xs:element name="DestroyBeliefEntity">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="BeliefEntityIdRef" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="BeliefEntityIdRef" type="ers:OpaqueExpression" minOccurs="0"
+					maxOccurs="unbounded"/>
 			</xs:sequence>
 			<xs:attribute name="beliefEntityIdRef" type="xs:long" use="optional"/>
 			<xs:attribute name="beliefEntityVariable" type="ers:CanonicalName" use="optional"/>
@@ -378,7 +346,7 @@
 	</xs:element>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<xs:element name="BeliefEntityRef">
-	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 		<xs:complexType>
 			<xs:simpleContent>
 				<xs:extension base="ers:OpaqueExpression">
@@ -420,32 +388,30 @@
 		<xs:attribute name="senderIdRef" type="xs:long" use="optional"/>
 		<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	</xs:complexType>
-  <!-- ==================================================================== -->
-  <xs:element name="ActionRule" type="aors:ActionRule.type"/>
-  <!-- ==================================================================== -->
-  <xs:complexType name="ActionRule.type">
-    <xs:sequence>
-      <xs:element ref="ers:documentation" minOccurs="0"/>
-      <!--xs:element name="FOR" type="aors:DataVariable-OR-BeliefEntityVariable-Declaration.type" minOccurs="0" maxOccurs="unbounded"/-->
-      <xs:element name="DO" type="aors:ActionRuleDO.type" minOccurs="0"/>
-      <xs:sequence minOccurs="0">
-        <xs:element ref="ers:IF" maxOccurs="unbounded"/>
-        <xs:element name="THEN" type="aors:ActionRuleDO.type"/>
-        <xs:sequence minOccurs="0" maxOccurs="unbounded">
-          <xs:element ref="ers:ELSE-IF" maxOccurs="unbounded"/>
-          <xs:element name="THEN" type="aors:ActionRuleDO.type"/>
-        </xs:sequence>
-        <xs:element name="ELSE" type="aors:ActionRuleDO.type" minOccurs="0"/>
-      </xs:sequence>
-    </xs:sequence>
-    <xs:attribute name="actionEventType" type="ers:CanonicalName" use="required"/>
-    <xs:attribute name="agentVariable" type="ers:CanonicalName" use="optional"/>
-    <xs:attribute name="eventVariable" type="ers:CanonicalName" use="optional"/>
-  </xs:complexType>
-  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-  <xs:complexType name="ActionRuleDO.type">
-    <xs:sequence>
-      <xs:element ref="aors:UPDATE-AGT" minOccurs="0"/>
-    </xs:sequence>
-  </xs:complexType>
+	<!-- ==================================================================== --> 
+	<xs:element name="ActionRule">  
+	<!-- ==================================================================== -->
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="documentation" type="ers:BasicDocumentation.type" minOccurs="0"/>
+				<xs:element name="RuleParameter" type="ers:Parameter.type" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation><xs:documentation>Action rule parameters can be used for creating action events. </xs:documentation></xs:annotation>					
+				</xs:element> <!-- NEW -->    	
+				<xs:element name="DO" type="aors:AgtRuleDO.type" minOccurs="0"/>
+				<xs:sequence minOccurs="0">
+					<xs:element ref="ers:IF" maxOccurs="unbounded"/>
+					<xs:element name="THEN" type="aors:AgtRuleDO.type"/>
+					<xs:sequence minOccurs="0" maxOccurs="unbounded">
+						<xs:element ref="ers:ELSE-IF" maxOccurs="unbounded"/>
+						<xs:element name="THEN" type="aors:AgtRuleDO.type"/>
+					</xs:sequence>
+					<xs:element name="ELSE" type="aors:AgtRuleDO.type" minOccurs="0"/>
+				</xs:sequence>
+			</xs:sequence>
+			<xs:attribute name="name" type="ers:CanonicalName" use="required"/> <!-- NEW -->
+			<xs:attribute name="agentVariable" type="aors:CanonicalName" use="optional">
+				<xs:annotation><xs:documentation>For accessing properties of, or invoking methods for, the agent concerned.</xs:documentation></xs:annotation>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>  
 </xs:schema>

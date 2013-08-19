@@ -1,47 +1,164 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="prettyprint.xsl"?>
-<SimulationScenario xmlns="http://aor-simulation.org"
-	xmlns:aors="http://aor-simulation.org" xmlns:dc="http://purl.org/dc/elements/1.1/"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://aor-simulation.org distribution/ext/aorsl/AORSL-0-8-3.xsd"
-	version="0.8.3" simulationManagerDirectory="aors" scenarioName="Juveniles1"
-	scenarioTitle="Juveniles Scenario 1">
-
-	<SimulationParameters simulationSteps="10000" />
-	
-	<SimulationModel modelName="Juveniles1" modelTitle="Juveniles Scenario 1">
-		<documentation>
-			<dc:creator>Rene Groothedde</dc:creator>
-			<dc:created>20130805</dc:created>
-			<dc:contributor>Chris Borkema</dc:contributor>
-		</documentation>
-		<aors:SpaceModel >
-			<aors:TwoDimensional yMax="100" xMax="100" ></aors:TwoDimensional>
-		</aors:SpaceModel>
-
-		<EntityTypes>
-
-			<aors:PhysicalAgentType name="Human" ></aors:PhysicalAgentType>
-			<aors:PhysicalAgentType name="Police"
-				superType="Human"></aors:PhysicalAgentType>
-			<aors:PhysicalAgentType name="Juvenile"
-				superType="Human" ></aors:PhysicalAgentType>
-		</EntityTypes>
-
-	</SimulationModel>
-
-	<InitialState>
-		<aors:PhysicalAgent type="Police" name="police" id="1" x="5" y="5"></aors:PhysicalAgent>
-		<aors:PhysicalAgent type="Juvenile" name="henk" id="2"></aors:PhysicalAgent>
-
-	</InitialState>
-
-	<UserInterface>
-		<aors:AnimationUI>
-			<aors:Views>
-				<aors:PhysicalObjectView physicalObjectType="Human" physicalObjectIdRef="1"><aors:DisplayInfo  property="name"></aors:DisplayInfo></aors:PhysicalObjectView>
-			</aors:Views>
-		</aors:AnimationUI>
-	</UserInterface>
-
+<SimulationScenario scenarioName="Juveniles1" version="0.9"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns="http://aor-simulation.org" xsi:schemaLocation="http://aor-simulation.org distribution/ext/aorsl/AORSL_0-9.xsd ">
+  <SimulationParameters simulationSteps="1000" />
+  <SimulationModel modelName="Juveniles1" modelTitle="Juveniles Scenario 1">
+    <documentation>
+      <dc:creator>Rene Groothedde</dc:creator>
+      <dc:created>20130805</dc:created>
+      <dc:contributor>Chris Broekema</dc:contributor>
+    </documentation>
+    <DataTypes>
+    </DataTypes>
+    <Globals>
+      <GlobalVariable name="StoryLog" dataType="String" initialValue="This is a story \n it happend \n"></GlobalVariable>
+    </Globals>
+    <EntityTypes>
+      <MessageType name="Talk">
+        <Attribute name="Content" type="String" />
+        <ReferenceProperty name="Sender" type="HumanType"></ReferenceProperty>
+        <Function resultType="String" name="toString">
+        
+          <Body language="Java JavaScript">this.getSender().getName()+ ":" + this.getContent()</Body>
+        </Function>
+        <!-- ========================== -->
+      </MessageType>
+      <MessageType name="MSG_Hoi" superType="Talk" />
+      <MessageType name="MSG_GO_AWAY" superType="Talk" />
+      <CausedEventType name="AskInput" />
+      <AgentType name="HumanType">
+        <Attribute name="messageHistory" type="String" initialValue="test" />
+        <Function resultType="void" name="addMessageToHistory">
+          <Parameter name="message" type="String" />
+          <Body language="Java JavaScript"> this.messageHistory = this.messageHistory + " " + message</Body>
+        </Function>
+      </AgentType>
+      <!-- ==================================== -->
+      <AgentType name="PoliceType" superType="HumanType">
+        <Attribute name="lastMessage" type="String" initialValue="Hoi" />
+        <ReactionRule name="AskInputForPolice" agentVariable="agt">
+          <WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Talk" messageVariable="msg"  />
+          <DO>
+            <SCHEDULE-EVT>
+              
+              <ActionEventExpr actionEventType="AskInput" delay="10"></ActionEventExpr>
+            </SCHEDULE-EVT>
+          </DO>
+        </ReactionRule>
+        <ActionRule name="talkRule" agentVariable="agt">
+          <RuleParameter name="msgContent" type="String" />
+          <DO>
+            <UPDATE-AGT>
+              <Slot property="lastMessage">
+                <ValueExpr language="Java JavaScript">this.msgContent</ValueExpr>
+              </Slot>
+            </UPDATE-AGT>
+            <SCHEDULE-EVT>
+              <OutMessageEventExpr messageType="Talk" delay="1" receiverIdRefs="3">
+                <Slot property="Content">
+                  <ValueExpr language="Java JavaScript">this.msgContent</ValueExpr>
+                </Slot>
+                <Slot property="Sender"><ValueExpr language="Java JavaScript">this.agt</ValueExpr></Slot>
+              </OutMessageEventExpr>
+            </SCHEDULE-EVT>
+          </DO>
+        </ActionRule>
+      </AgentType>
+      <AgentType name="JuvenileType" superType="HumanType">
+        <ReactionRule name="AnwserRule" agentVariable="var">
+          <WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Talk" messageVariable="msg" />
+          <IF language="Java">this.msg.getContent().equals("MSG_GO_AWAY") </IF>
+          <IF language="JavaScript">this.msg.getContent() == "MSG_GO_AWAY" </IF>
+          <THEN>
+            <SCHEDULE-EVT>
+              <OutMessageEventExpr messageType="Talk" delay="10" receiverIdRefs="2">
+                <Slot property="Content" value="Ga zelf weg" />
+              </OutMessageEventExpr>
+            </SCHEDULE-EVT>
+          </THEN>
+        </ReactionRule>
+        <ReactionRule name="AnwserRule2" agentVariable="var">
+          <WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Talk" messageVariable="msg" />
+          <IF language="Java">this.msg.getContent().equals("MSG_HELLO") </IF>
+          <IF language="JavaScript">this.msg.getContent() == "MSG_HELLO" </IF>
+          <THEN>
+            <SCHEDULE-EVT>
+              <OutMessageEventExpr messageType="Talk" delay="10" receiverIdRefs="2">
+                <Slot property="Content" value="Hoi" />
+              </OutMessageEventExpr>
+            </SCHEDULE-EVT>
+          </THEN>
+        </ReactionRule>
+      </AgentType>
+    </EntityTypes>
+    
+  </SimulationModel>
+  <!-- =================================================== -->
+  <InitialState>
+    <Agent type="PoliceType" name="Henk" id="2">
+    </Agent>
+    <Agent type="JuvenileType" name="Harry" id="3">
+    </Agent>
+    <CausedEvent occurrenceTime="1" type="AskInput"></CausedEvent>
+  </InitialState>
+  <UserInterface supportedLanguages="en">
+    <AnimationUI>
+      <Views>
+        <SpaceView canvasColor="darkgrey">
+          <TwoDimensionalSpaceView2D backgroundColor="white" />
+        </SpaceView>
+        <ObjectView objectType="JuvenileType" displayName="true">
+          <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+          <Shape2D x="600px" y="250px">
+            <Rectangle texture="juvenile.png" positioning="CenterTop" height="30px" width="30px" />
+          </Shape2D>
+        </ObjectView>
+        <ObjectView objectType="PoliceType" displayName="true">
+          <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+          <Shape2D x="50px" y="250px">
+            <Rectangle texture="agent.png" positioning="CenterTop" height="30px" width="30px"></Rectangle>
+          </Shape2D>
+        </ObjectView>
+      </Views>
+      <AgentControlUI waitForUserInput="true" initiallyPlayedAgent="Henk">
+        <AgentControlByAgentType type="PoliceType">
+          <BottomOutputPanel>
+            <OutputFieldGroup>
+              <OutputField label="Story:">
+                <Source>
+                  <GlobalVariable name="StoryLog" />
+                </Source>
+              </OutputField>
+            </OutputFieldGroup>
+          </BottomOutputPanel>
+          <LeftOutputPanel>
+            <OutputFieldGroup>
+              <OutputField label="Last Message" agentAttribute="messageHistory" />
+            </OutputFieldGroup>
+          </LeftOutputPanel>
+          <RightOutputPanel>
+            <EventList>
+              <InMessageEventView label="Berichten" messageType="Talk" showSender="true"
+                keepInListTime="10000">
+                <MessageProperty name="Content" label="Content"></MessageProperty>
+              </InMessageEventView>
+            </EventList>
+          </RightOutputPanel>
+          <MultiChoiceUserActionForm actionRuleParameter="msgContent"
+            actionRule="talkRule" positioning="LeftBottom" enabledWhenEventOfType="AskInput">
+            <Options>
+              <Option value="MSG_GO_AWAY">
+                <Text>Ga weg</Text>
+              </Option>
+              <Option value="MSG_HELLO">
+                <Text>Hoi</Text>
+              </Option>
+            </Options>
+          </MultiChoiceUserActionForm>
+        </AgentControlByAgentType>
+      </AgentControlUI>
+    </AnimationUI>
+  </UserInterface>
 </SimulationScenario>

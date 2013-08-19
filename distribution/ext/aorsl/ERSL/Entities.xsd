@@ -28,9 +28,11 @@
 					<xs:element name="ObjectID" type="ers:OpaqueExpression" minOccurs="0" maxOccurs="unbounded"/>
 					<xs:element name="Component" type="ers:Object.type" minOccurs="0" maxOccurs="unbounded"/>
 				</xs:sequence>
+<!--  DROPPED in 0.8.4
 				<xs:attribute name="addToCollection" type="ers:CanonicalName" use="optional">
 					<xs:annotation><xs:documentation>Can be used to add the newly created object to a collection defined in the simulation  model.</xs:documentation></xs:annotation>
 				</xs:attribute>
+-->
 				<xs:attribute name="objectVariable" type="ers:CanonicalName" use="optional">
 					<xs:annotation><xs:documentation>Allows to define an object variable that can be used in the following object creation statements for accessing properies and functions of that object.</xs:documentation></xs:annotation>
 				</xs:attribute>
@@ -254,9 +256,21 @@
 	<!-- =================================================================== -->
 	<xs:complexType name="AtomicEvent.type">
 		<xs:complexContent>
-			<xs:extension base="ers:Entity.type">
-				<xs:attribute name="occurrenceTime" type="xs:positiveInteger" use="required"/>
+			<xs:extension base="ers:AtomicEvent-0.type">
+				<xs:attribute name="occurrenceTime" type="xs:positiveInteger" use="optional"/>
 			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="AtomicEvent-0.type">
+		<xs:complexContent>
+			<xs:restriction base="ers:Entity.type">
+				<xs:sequence>
+					<xs:element ref="ers:Slot" minOccurs="0" maxOccurs="unbounded"/>
+				</xs:sequence>
+				<xs:attribute name="type" type="ers:CanonicalName" use="required"/>
+				<xs:attribute name="id" type="xs:long" use="prohibited"/>
+				<xs:attribute name="name" type="xs:NCName" use="prohibited"/>
+			</xs:restriction>
 		</xs:complexContent>
 	</xs:complexType>
 	<!-- =================================================================== -->
@@ -264,7 +278,13 @@
 	<!-- =================================================================== -->
 	<xs:complexType name="EnvironmentEvent.type">
 		<xs:complexContent>
-			<xs:extension base="ers:AtomicEvent.type"/>
+			<xs:restriction base="ers:AtomicEvent.type">
+				<xs:sequence>
+					<xs:element ref="ers:Slot" minOccurs="0" maxOccurs="unbounded"/>
+				</xs:sequence>
+				<xs:attribute name="type" type="ers:CanonicalName" use="required"/>
+				<xs:attribute name="occurrenceTime" type="xs:positiveInteger" use="required"/>
+			</xs:restriction>
 		</xs:complexContent>
 	</xs:complexType>
 	<!-- =================================================================== -->
@@ -337,9 +357,8 @@
 		<xs:attribute name="endY" type="xs:nonNegativeInteger" use="required"/>
 		<xs:attribute name="creationLoopVar" type="ers:CanonicalName" use="optional"/>
 	</xs:complexType>
-	<!-- =================================================================== -->
+	<!-- DROPPED in 0.8.4 =================================================================== 
 	<xs:element name="Collection" type="ers:Collection.type" substitutionGroup="ers:Object"/>
-	<!-- =================================================================== -->
 	<xs:complexType name="Collection.type">
 		<xs:complexContent>
 			<xs:extension base="ers:Collection.type0">
@@ -367,4 +386,5 @@
 			</xs:restriction>
 		</xs:complexContent>
 	</xs:complexType>
+	-->
 </xs:schema>
