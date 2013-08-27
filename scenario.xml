@@ -2,7 +2,8 @@
 <?xml-stylesheet type="text/xsl" href="prettyprint.xsl" ?>
 <SimulationScenario scenarioName="Juveniles1" version="0.9" createSimulationLog="true"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/"
-	xmlns="http://aor-simulation.org" xsi:schemaLocation="http://aor-simulation.org distribution/ext/aorsl/AORSL_0-9.xsd ">
+	xmlns="http://aor-simulation.org" xmlns:aor="http://aor-simulation.org"
+	xsi:schemaLocation="http://aor-simulation.org distribution/ext/aorsl/AORSL_0-9.xsd ">
 	<SimulationParameters simulationSteps="1000" />
 	<SimulationModel modelName="Juveniles1" modelTitle="Juveniles Scenario 1">
 		<documentation>
@@ -18,25 +19,37 @@
 		<Globals>
 			<GlobalVariable name="POLICE_ID" dataType="Integer" initialValue="1" />
 			<GlobalVariable name="JUVENILE_ID" dataType="Integer" initialValue="2" />
+			<aor:GlobalVariable name="REACTION_DELAY" dataType="Integer" initialValue="30" />
 			<GlobalVariable name="MessageLogString" dataType="String" initialValue=""></GlobalVariable>
 			<GlobalFunction resultType="String" name="getAppendedLog">
 				<Parameter name="message" type="String" />
-				<Body language="Java JavaScript">
+				<Body language="Java">
+				string result = Global.MessageLogString + "; " + message;
+				result = result.substring(result.length()-100);
 				simConsole.message(message);
-				return Global.MessageLogString + "\n" + message;
+				return result;
+				</Body>
+				<Body language="JavaScript">
+				var result = Global.MessageLogString + "; " + message;
+				var maxlength = 120;
+				if (result.length > maxlength){
+					result = "..."+ result.substring(result.length - maxlength);}
+				simConsole.message(message);
+				return result;
 				</Body>
 			</GlobalFunction>
 		</Globals>
 		<!-- ========================== -->
 		<EntityTypes>
 			<!-- ========================== -->
+			
 			<MessageType name="Tell">
-			<Attribute name="senderName" type="String"/>
+				<Attribute name="senderName" type="String" />
 				<!-- ========================== -->
 				<Attribute name="content" type="String" />
 				<!-- ========================== -->
 				<Function resultType="String" name="toString">
-					<Body language="Java JavaScript">return this.getSenderName() + ":"+ this.getContent();</Body>
+					<Body language="Java JavaScript">return this.getSenderName() + ":\""+ this.getContent()+ "\"";</Body>
 				</Function>
 				<!-- ========================== -->
 				<Function resultType="boolean" name="contentEquals">
@@ -46,22 +59,30 @@
 				</Function>
 				<!-- ========================== -->
 			</MessageType>
-		
-			
 			<!-- ========================== -->
 			<CausedEventType name="AskInput" />
+			
 			<!-- ========================== -->
-			<ActionEventType name="AddLogMessage"><Attribute name="msg" type="String" /></ActionEventType>
+			<ActionEventType name="AddLogMessage">
+				<Attribute name="msg" type="String" />
+			</ActionEventType>
 			<!-- ========================== -->
 			<AgentType memorySize="5" name="Person">
-				<Attribute name="lastMessage" type="String" initialValue="Last message.." />
+				<Attribute name="lastMessage" type="String" initialValue="" />
+				
 				<ReferenceProperty name="MessageHistory" type="Tell"></ReferenceProperty>
-				<ReactionRule name="LogMessage">
+				<!-- ========================== -->
+				<ReactionRule name="LogIncommingMessage">
+					<aor:documentation>
+						<aor:description>test</aor:description>
+					</aor:documentation>
 					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
 					<DO>
 						<SCHEDULE-EVT>
 							<ActionEventExpr actionEventType="AddLogMessage">
-								<Slot property="msg"><ValueExpr language="Java JavaScript" logPeriodicity="1">this.msg.toString()</ValueExpr></Slot>
+								<Slot property="msg">
+									<ValueExpr language="Java JavaScript" logPeriodicity="1">this.msg.toString()</ValueExpr>
+								</Slot>
 							</ActionEventExpr>
 						</SCHEDULE-EVT>
 					</DO>
@@ -74,13 +95,13 @@
 						messageVariable="msg" />
 					<DO>
 						<SCHEDULE-EVT>
-							<ActionEventExpr actionEventType="AskInput" delay="10">
+							<ActionEventExpr actionEventType="AskInput" ><aor:Delay>
+									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
+								</aor:Delay>
 							</ActionEventExpr>
 						</SCHEDULE-EVT>
 					</DO>
 				</ReactionRule>
-				
-				
 				<!-- ========================== -->
 				<ActionRule name="TellRule" agentVariable="agt">
 					<RuleParameter name="msgContent" type="String" />
@@ -91,8 +112,11 @@
 							</Slot>
 						</UPDATE-AGT>
 						<SCHEDULE-EVT>
-							<OutMessageEventExpr messageType="Tell" delay="1">
+							<OutMessageEventExpr messageType="Tell" >
 								<ReceiverIdRef language="Java JavaScript">Global.JUVENILE_ID </ReceiverIdRef>
+								<aor:Delay>
+									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
+								</aor:Delay>
 								<Slot property="senderName">
 									<ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr>
 								</Slot>
@@ -107,29 +131,73 @@
 			<!-- ========================== -->
 			<AgentType name="Juvenile" superType="Person" memorySize="5">
 				<!-- =================================================== -->
-				<ReactionRule name="AnwserRule" agentVariable="agt">
+				<ReactionRule name="AnwserGaWeg" agentVariable="agt">
 					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
-					<IF language="Java JavaScript">this.msg.contentEquals("MSG_GO_AWAY") </IF>
+					<IF language="Java JavaScript">this.msg.contentEquals("Ga weg") </IF>
 					<THEN>
+						<UPDATE-AGT >
+							<Slot  property="lastMessage" value="Ga zelf weg" />
+						</UPDATE-AGT>
 						<SCHEDULE-EVT>
-							<OutMessageEventExpr messageType="Tell" delay="10">
+							<OutMessageEventExpr messageType="Tell">
 								<ReceiverIdRef language="Java JavaScript">Global.POLICE_ID </ReceiverIdRef>
-								<Slot property="senderName"><ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr></Slot>
-								<Slot property="content" value="Ga zelf weg"/>
+								<aor:Delay>
+									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
+								</aor:Delay>
+								<Slot property="senderName">
+									<ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr>
+								</Slot>
+								<Slot property="content">
+									<ValueExpr language="Java JavaScript">this.agt.getLastMessage()</ValueExpr>
+								</Slot>
 							</OutMessageEventExpr>
 						</SCHEDULE-EVT>
 					</THEN>
 				</ReactionRule>
 				<!-- =================================================== -->
-				<ReactionRule name="AnwserRule2" agentVariable="agt">
+				<ReactionRule name="AnwserHoi" agentVariable="agt">
 					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
-					<IF language="Java JavaScript">this.msg.contentEquals("MSG_HELLO") </IF>
+					<IF language="Java JavaScript">this.msg.contentEquals("Hoi") </IF>
 					<THEN>
+						<UPDATE-AGT>
+							<Slot property="lastMessage" value="Hoi" />
+						</UPDATE-AGT>
 						<SCHEDULE-EVT>
-							<OutMessageEventExpr messageType="Tell" delay="10">
+							<OutMessageEventExpr messageType="Tell">
 								<ReceiverIdRef language="Java JavaScript">Global.POLICE_ID </ReceiverIdRef>
-								<Slot property="senderName"><ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr></Slot>
-								<Slot property="content" value="Hoi"/>
+								<aor:Delay>
+									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
+								</aor:Delay>
+								<Slot property="senderName">
+									<ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr>
+								</Slot>
+								<Slot property="content">
+									<ValueExpr language="Java JavaScript">this.agt.getLastMessage()</ValueExpr>
+								</Slot>
+							</OutMessageEventExpr>
+						</SCHEDULE-EVT>
+					</THEN>
+				</ReactionRule>
+				<!-- =================================================== -->
+				<ReactionRule name="AnwserWatDoeJeHier" agentVariable="agt">
+					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
+					<IF language="Java JavaScript">this.msg.contentEquals("Wat doe je hier?") </IF>
+					<THEN>
+						<UPDATE-AGT>
+							<Slot property="lastMessage" value="Gewoon staan" />
+						</UPDATE-AGT>
+						<SCHEDULE-EVT>
+							<OutMessageEventExpr messageType="Tell">
+								<ReceiverIdRef language="Java JavaScript">Global.POLICE_ID </ReceiverIdRef>
+								<aor:Delay>
+									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
+								</aor:Delay>
+								<Slot property="senderName">
+									<ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr>
+								</Slot>
+								<Slot property="content">
+									<ValueExpr language="Java JavaScript">this.agt.getLastMessage()</ValueExpr>
+								</Slot>
 							</OutMessageEventExpr>
 						</SCHEDULE-EVT>
 					</THEN>
@@ -163,61 +231,63 @@
 	</InitialState>
 	<!-- =================================================== -->
 	<UserInterface supportedLanguages="en">
-		<AnimationUI >
-			<Views >
+		<AnimationUI>
+			<Views>
 				<SpaceView canvasColor="darkgrey">
 					<TwoDimensionalSpaceView2D backgroundColor="white" />
 				</SpaceView>
 				<!-- =================================================== -->
 				<ObjectView objectType="Juvenile" displayName="true">
 					<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-					<Shape2D x="600px" y="250px">
+					<Shape2D x="70%" y="50%">
 						<Rectangle texture="juvenile.png" positioning="CenterTop" height="30px" width="30px" />
 					</Shape2D>
+					<aor:DisplayInfo property="lastMessage" />
 				</ObjectView>
 				<!-- =================================================== -->
 				<ObjectView objectType="Police" displayName="true">
 					<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-					<Shape2D x="50px" y="250px">
+					<Shape2D x="30%" y="50%">
 						<Rectangle texture="agent.png" positioning="CenterTop" height="30px" width="30px"></Rectangle>
 					</Shape2D>
+					<aor:DisplayInfo property="lastMessage"/>
 				</ObjectView>
 			</Views>
 			<!-- =================================================== -->
 			<AgentControlUI waitForUserInput="true" initiallyPlayedAgent="Henk">
-				<AgentControlByAgentType  type="Police">
+				<AgentControlByAgentType cssFile="https://github.com/Chrizzoo/Storytelling-AORS/blob/master/custom.css"
+					type="Police">
 					<!-- =================================================== -->
-					<BottomOutputPanel >
-						<OutputFieldGroup >
-							<OutputField label="Log">
-								<Source  >
+					<TopOutputPanel>
+						<OutputFieldGroup>
+							<OutputField label="Log:">
+								<Source>
 									<GlobalVariable name="MessageLogString" />
 								</Source>
 							</OutputField>
 						</OutputFieldGroup>
-					</BottomOutputPanel>
+					</TopOutputPanel>
 					<!-- =================================================== -->
-					<LeftOutputPanel >
-						<EventList  >
-						
-							<InMessageEventView label="Bericht" messageType="Tell" 
-								keepInListTime="100">
+					<RightOutputPanel width="1">
+						<EventList>
+							<InMessageEventView label="Bericht" messageType="Tell" keepInListTime="10">
 								<MessageProperty name="senderName" label="Persoon"></MessageProperty>
 								<MessageProperty name="content" label="zegt" />
-								
 							</InMessageEventView>
-							
 						</EventList>
-					</LeftOutputPanel>
+					</RightOutputPanel>
 					<!-- =================================================== -->
 					<MultiChoiceUserActionForm actionRuleParameter="msgContent"
-						actionRule="TellRule" positioning="RightTop" enabledWhenEventOfType="AskInput">
+						actionRule="TellRule" positioning="CenterBottom" enabledWhenEventOfType="AskInput">
 						<Options>
-							<Option value="MSG_GO_AWAY" default="true">
+							<Option value="Ga weg" default="true">
 								<Text>Ga weg</Text>
 							</Option>
-							<Option value="MSG_HELLO">
+							<Option value="Hoi">
 								<Text>Hoi</Text>
+							</Option>
+							<Option value="Wat doe je hier?">
+								<Text>Wat doe je hier?</Text>
 							</Option>
 						</Options>
 					</MultiChoiceUserActionForm>
