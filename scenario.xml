@@ -4,7 +4,7 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/"
 	xmlns="http://aor-simulation.org" xmlns:aor="http://aor-simulation.org"
 	xsi:schemaLocation="http://aor-simulation.org distribution/ext/aorsl/AORSL_0-9.xsd ">
-	<SimulationParameters simulationSteps="1000" />
+	<SimulationParameters createDebuggingOutput="true" simulationSteps="1000" />
 	<SimulationModel modelName="Juveniles1" modelTitle="Juveniles Scenario 1">
 		<documentation>
 			<dc:creator>Rene Groothedde</dc:creator>
@@ -13,6 +13,12 @@
 		</documentation>
 		<!-- ========================== -->
 		<DataTypes>
+			<aor:Enumeration name="ConflictStrategy">
+				<aor:EnumerationLiteral displayString="Competitive">COMPETITIVE</aor:EnumerationLiteral>
+				<aor:EnumerationLiteral displayString="Avoiding">AVOIDING</aor:EnumerationLiteral>
+				<aor:EnumerationLiteral displayString="Collaborating">COLLABORATING</aor:EnumerationLiteral>
+				<aor:EnumerationLiteral displayString="Accomodating">ACCOMODATING</aor:EnumerationLiteral>
+			</aor:Enumeration>
 			<ComplexDataType name="MessageContent"></ComplexDataType>
 		</DataTypes>
 		<!-- ========================== -->
@@ -20,7 +26,9 @@
 			<GlobalVariable name="POLICE_ID" dataType="Integer" initialValue="1" />
 			<GlobalVariable name="JUVENILE_ID" dataType="Integer" initialValue="2" />
 			<aor:GlobalVariable name="REACTION_DELAY" dataType="Integer" initialValue="30" />
+			<!-- ========================== -->
 			<GlobalVariable name="MessageLogString" dataType="String" initialValue=""></GlobalVariable>
+			<!-- ========================== -->
 			<GlobalFunction resultType="String" name="getAppendedLog">
 				<Parameter name="message" type="String" />
 				<Body language="Java">
@@ -38,18 +46,76 @@
 				return result;
 				</Body>
 			</GlobalFunction>
+			<aor:GlobalFunction resultType="Integer" name="getAssertiveness">
+				<aor:Parameter name="strategy" type="ConflictStrategy"/>
+			   <aor:Body language="Java JavaScript">
+			     <![CDATA[
+                  var result = 0;
+                  switch(strategy) {
+                      case( ConflictStrategy.COMPETITIVE): {   
+                      		result =  1
+                          	break;
+                      }
+                      case( ConflictStrategy.AVOIDING): {
+                         	result = 0
+                         	break;
+                      }
+                      case( ConflictStrategy.COLLABORATING): {
+                          	result =  1
+                          	break;
+                      }
+                      case ( ConflictStrategy.ACCOMODATING ): {
+                         	result =  0
+                         	break;
+                      }
+                      default: {
+                      	result = -1;
+                      	break;}
+                  }
+                  return result;
+			   ]]>
+			   </aor:Body>
+			</aor:GlobalFunction>
+			<aor:GlobalFunction resultType="Integer" name="getCooperativeness">
+				<aor:Parameter name="strategy" type="ConflictStrategy"/>
+			   <aor:Body language="Java JavaScript">
+			     <![CDATA[
+                  var result = 0;
+                  switch(strategy) {
+                      case( ConflictStrategy.COMPETITIVE): {   
+                      		result =  0
+                          	break;
+                      }
+                      case( ConflictStrategy.AVOIDING): {
+                         	result = 0
+                         	break;
+                      }
+                      case( ConflictStrategy.COLLABORATING): {
+                          	result =  1
+                          	break;
+                      }
+                      case ( ConflictStrategy.ACCOMODATING ): {
+                         	result =  1
+                         	break;
+                      }
+                      default: {
+                      	result = -1;
+                      	break;}
+                  }
+                  return result;
+			   ]]>
+			   </aor:Body>
+			</aor:GlobalFunction>
 		</Globals>
 		<!-- ========================== -->
 		<EntityTypes>
 			<!-- ========================== -->
-			
 			<MessageType name="Tell">
-				<Attribute name="senderName" type="String" />
-				<!-- ========================== -->
-				<Attribute name="content" type="String" />
+				<aor:ReferenceProperty name="sender" type="Person" />
+				<aor:ReferenceProperty name="choosenAction" type="ActionChoice" />
 				<!-- ========================== -->
 				<Function resultType="String" name="toString">
-					<Body language="Java JavaScript">return this.getSenderName() + ":\""+ this.getContent()+ "\"";</Body>
+					<Body language="Java JavaScript">return this.getSender().getName() + ":\""+ this.getChoosenAction().getDisplayText()+ "\"";</Body>
 				</Function>
 				<!-- ========================== -->
 				<Function resultType="boolean" name="contentEquals">
@@ -59,150 +125,193 @@
 				</Function>
 				<!-- ========================== -->
 			</MessageType>
+			<CausedEventType name="StartSim" />
 			<!-- ========================== -->
 			<CausedEventType name="AskInput" />
-			
 			<!-- ========================== -->
 			<ActionEventType name="AddLogMessage">
 				<Attribute name="msg" type="String" />
 			</ActionEventType>
 			<!-- ========================== -->
-			<AgentType memorySize="5" name="Person">
+			<AgentType memorySize="15" name="Person">
+				<Attribute name="character" type="String" />
 				<Attribute name="lastMessage" type="String" initialValue="" />
-				
-				<ReferenceProperty name="MessageHistory" type="Tell"></ReferenceProperty>
+				<!-- whether or not the next action of the agent needs to be calculated -->
+				<Attribute name="needsActionCalculation" type="Boolean" initialValue="false" />
+				<Attribute name="actionNeeded" type="Boolean" initialValue="false" />
+				<aor:Attribute name="receiverID" type="Integer" initialValue="0" />
 				<!-- ========================== -->
-				<ReactionRule name="LogIncommingMessage">
-					<aor:documentation>
-						<aor:description>test</aor:description>
-					</aor:documentation>
-					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
-					<DO>
+				
+				<!-- self -->
+				
+
+				<!-- the strategy that the character currently has -->
+				<aor:EnumerationProperty name="currentStrategy" type="ConflictStrategy" />
+				
+				<!-- the strategy that the character has according to his personality -->
+				<aor:EnumerationProperty name="personalityStrategy" type="ConflictStrategy" />
+				
+				<!-- the mood that the character currently has -->
+				<aor:Attribute name="currentMood" type="Integer" initialValue="0" />
+				
+				<!-- the strategy that the character has chosen based on its intentions -->
+				<aor:EnumerationProperty name="activePursuitStrategy" type="ConflictStrategy" />
+				
+				<!-- values for calculating next action. -->
+				<aor:Attribute name="bestUtilityValue" type="Integer" initialValue="0"/>
+				<aor:ReferenceProperty name="nextAction" type="ActionChoice" />
+				
+				<!-- other (conversational partner) -->
+				<aor:EnumerationProperty name="otherStrategy" type="ConflictStrategy" />
+				<aor:ReferenceProperty name="otherAction" type="ActionChoice" />
+				
+				<!-- ========================== -->
+				
+				<aor:Function resultType="Integer" name="ProcessIncomingMessage"  >
+					<aor:Parameter name="message" type="Message"/>
+					<aor:Body language="Java JavaScript">
+					<![CDATA[		
+						this.setOtherAction(message.choosenAction);
+						this.setOtherStrategy(this.getOtherAction().getStrategy());
+						
+						/* Change the Mood acording to the action of the other! */
+						this.setCurrentMood(this.getCurrentMood() + this.getOtherAction().getOtherMoodBelief());
+						
+						
+						/* Some Debug outputs */					
+						simConsole.message(this.getOtherAction().toString());
+						simConsole.message("my A: "+Global.getAssertiveness(this.getCurrentStrategy()));
+						simConsole.message("my C: "+Global.getCooperativeness(this.getCurrentStrategy()));
+						
+						simConsole.message("his A: "+Global.getAssertiveness(this.getOtherStrategy()));
+						simConsole.message("his C: "+Global.getCooperativeness(this.getOtherStrategy()));
+						simConsole.message(this.getName()+" :"+this.getCurrentMood());
+						]]>	
+					</aor:Body>
+				</aor:Function>
+				<aor:Function resultType="Integer" name="calculateUtilityValue">
+					<aor:Parameter name="action" type="ActionChoice"/>
+					<aor:Body language="JavaScript">
+					<![CDATA[		
+						// WIP!
+							var util = action.getOtherMoodBelief();
+							simConsole.message("Utility: "+util);
+							simConsole.message("Action: "+action);
+							
+							if (util > this.getBestUtilityValue()) {
+								this.setBestUtilityValue(util);
+							
+							}
+						
+						return util;
+					]]>	
+					</aor:Body>
+				</aor:Function>
+								
+				<!-- ========================== -->
+				<aor:ReactionRule name="PerformActionRule" agentVariable="agt">
+					<aor:ON-EACH-SIMULATION-STEP />
+					<aor:IF language="JavaScript"><![CDATA[!(this.agt.isNeedsActionCalculation()) && this.agt.isActionNeeded() && this.agt.getNextAction() !== null]]></aor:IF>
+					<aor:THEN>
+						<!-- <aor:DO> -->
+						<aor:UPDATE-AGT>
+							<aor:Slot property="actionNeeded" value="false" />
+							<aor:Slot property="lastMessage">
+								<aor:ValueExpr language="Java JavaScript">this.agt.getNextAction().getDisplayText()</aor:ValueExpr>
+							</aor:Slot>
+						</aor:UPDATE-AGT>
 						<SCHEDULE-EVT>
 							<ActionEventExpr actionEventType="AddLogMessage">
 								<Slot property="msg">
-									<ValueExpr language="Java JavaScript" logPeriodicity="1">this.msg.toString()</ValueExpr>
+									<ValueExpr language="Java JavaScript" logPeriodicity="1">this.agt.getName()+ ":\"" +this.agt.getNextAction().getDisplayText() + "\""</ValueExpr>
 								</Slot>
 							</ActionEventExpr>
+							<OutMessageEventExpr messageType="Tell">
+								<ReceiverIdRef language="Java JavaScript">this.agt.getReceiverID() </ReceiverIdRef>
+								<aor:Delay>
+									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
+								</aor:Delay>
+								<Slot property="sender">
+									<ValueExpr language="Java JavaScript">this.agt</ValueExpr>
+								</Slot>
+								<Slot property="choosenAction">
+									<ValueExpr language="Java JavaScript">this.agt.getNextAction()</ValueExpr>
+								</Slot>
+							</OutMessageEventExpr>
 						</SCHEDULE-EVT>
-					</DO>
+						<!-- </aor:DO> -->
+					</aor:THEN>
+				</aor:ReactionRule>
+				<!-- =========== --> 
+				<ReactionRule name="UseIncomingMessage" agentVariable="agt">
+					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
+					<aor:DO>
+						 <aor:UPDATE-AGT>
+						 	<aor:Call contextObjectVariable="agt" procedure="ProcessIncomingMessage">
+						 		<aor:Argument parameter="message"><aor:ValueExpr language="Java JavaScript">this.msg</aor:ValueExpr></aor:Argument>
+						 	</aor:Call>
+						</aor:UPDATE-AGT>
+					</aor:DO>
 				</ReactionRule>
+				<!-- ========================== -->
+				
 			</AgentType>
 			<!-- ==================================== -->
-			<AgentType memorySize="5" name="Police" superType="Person">
+			<AgentType memorySize="15" name="Police" superType="Person">
+				<aor:Attribute name="lastInputChoice" type="String" />
 				<ReactionRule name="AskInputForPolice" agentVariable="agt">
 					<WHEN eventType="InMessageEvent" eventVariable="evtVar" messageType="Tell"
 						messageVariable="msg" />
 					<DO>
 						<SCHEDULE-EVT>
-							<ActionEventExpr actionEventType="AskInput" ><aor:Delay>
+							<ActionEventExpr actionEventType="AskInput">
+								<aor:Delay>
 									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
 								</aor:Delay>
 							</ActionEventExpr>
 						</SCHEDULE-EVT>
 					</DO>
 				</ReactionRule>
+				<!-- -->
 				<!-- ========================== -->
-				<ActionRule name="TellRule" agentVariable="agt">
-					<RuleParameter name="msgContent" type="String" />
+				<ActionRule name="ProcessInput" agentVariable="agt">
+					<RuleParameter name="inputChoice" type="String" />
 					<DO>
 						<UPDATE-AGT>
-							<Slot property="lastMessage">
-								<ValueExpr logPeriodicity="5" language="Java JavaScript">this.msgContent</ValueExpr>
+							<Slot property="lastInputChoice">
+								<ValueExpr logPeriodicity="5" language="Java JavaScript">this.inputChoice</ValueExpr>
 							</Slot>
+							<aor:Slot property="actionNeeded" value="true" />
+							<aor:Slot property="needsActionCalculation" value="true" />
 						</UPDATE-AGT>
-						<SCHEDULE-EVT>
-							<OutMessageEventExpr messageType="Tell" >
-								<ReceiverIdRef language="Java JavaScript">Global.JUVENILE_ID </ReceiverIdRef>
-								<aor:Delay>
-									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
-								</aor:Delay>
-								<Slot property="senderName">
-									<ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr>
-								</Slot>
-								<Slot property="content">
-									<ValueExpr language="Java JavaScript">this.msgContent</ValueExpr>
-								</Slot>
-							</OutMessageEventExpr>
-						</SCHEDULE-EVT>
 					</DO>
 				</ActionRule>
 			</AgentType>
 			<!-- ========================== -->
-			<AgentType name="Juvenile" superType="Person" memorySize="5">
+			<AgentType memorySize="15" name="Juvenile" superType="Person" >
 				<!-- =================================================== -->
-				<ReactionRule name="AnwserGaWeg" agentVariable="agt">
+				<ReactionRule name="ReceiveMessage" agentVariable="agt">
 					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
-					<IF language="Java JavaScript">this.msg.contentEquals("Ga weg") </IF>
-					<THEN>
-						<UPDATE-AGT >
-							<Slot  property="lastMessage" value="Ga zelf weg" />
-						</UPDATE-AGT>
-						<SCHEDULE-EVT>
-							<OutMessageEventExpr messageType="Tell">
-								<ReceiverIdRef language="Java JavaScript">Global.POLICE_ID </ReceiverIdRef>
-								<aor:Delay>
-									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
-								</aor:Delay>
-								<Slot property="senderName">
-									<ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr>
-								</Slot>
-								<Slot property="content">
-									<ValueExpr language="Java JavaScript">this.agt.getLastMessage()</ValueExpr>
-								</Slot>
-							</OutMessageEventExpr>
-						</SCHEDULE-EVT>
-					</THEN>
-				</ReactionRule>
-				<!-- =================================================== -->
-				<ReactionRule name="AnwserHoi" agentVariable="agt">
-					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
-					<IF language="Java JavaScript">this.msg.contentEquals("Hoi") </IF>
-					<THEN>
-						<UPDATE-AGT>
-							<Slot property="lastMessage" value="Hoi" />
-						</UPDATE-AGT>
-						<SCHEDULE-EVT>
-							<OutMessageEventExpr messageType="Tell">
-								<ReceiverIdRef language="Java JavaScript">Global.POLICE_ID </ReceiverIdRef>
-								<aor:Delay>
-									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
-								</aor:Delay>
-								<Slot property="senderName">
-									<ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr>
-								</Slot>
-								<Slot property="content">
-									<ValueExpr language="Java JavaScript">this.agt.getLastMessage()</ValueExpr>
-								</Slot>
-							</OutMessageEventExpr>
-						</SCHEDULE-EVT>
-					</THEN>
-				</ReactionRule>
-				<!-- =================================================== -->
-				<ReactionRule name="AnwserWatDoeJeHier" agentVariable="agt">
-					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
-					<IF language="Java JavaScript">this.msg.contentEquals("Wat doe je hier?") </IF>
-					<THEN>
-						<UPDATE-AGT>
-							<Slot property="lastMessage" value="Gewoon staan" />
-						</UPDATE-AGT>
-						<SCHEDULE-EVT>
-							<OutMessageEventExpr messageType="Tell">
-								<ReceiverIdRef language="Java JavaScript">Global.POLICE_ID </ReceiverIdRef>
-								<aor:Delay>
-									<aor:GlobalVariableValueExpr variable="REACTION_DELAY" />
-								</aor:Delay>
-								<Slot property="senderName">
-									<ValueExpr language="Java JavaScript">this.agt.getName()</ValueExpr>
-								</Slot>
-								<Slot property="content">
-									<ValueExpr language="Java JavaScript">this.agt.getLastMessage()</ValueExpr>
-								</Slot>
-							</OutMessageEventExpr>
-						</SCHEDULE-EVT>
-					</THEN>
+					<aor:DO>
+						 <aor:UPDATE-AGT>
+						<aor:Slot property="actionNeeded" value="true" />
+							<aor:Slot property="needsActionCalculation" value="true" />
+						</aor:UPDATE-AGT>
+					</aor:DO>
 				</ReactionRule>
 			</AgentType>
+			<!-- =================================================== -->
+			<aor:ObjectType name="ActionChoice">
+				<aor:Attribute name="character" type="String" />
+				<aor:Attribute name="displayText" type="String" />
+				<aor:Attribute name="conversationType" type="String" />
+				<aor:Attribute name="mood" type="Integer" />
+				<aor:Attribute name="otherMoodBelief" type="Integer"/>
+				<aor:EnumerationProperty name="strategy" type="ConflictStrategy" />
+				<aor:Function resultType="String" name="toString">
+					<Body language="Java JavaScript">return "A:"+Global.getAssertiveness(this.getStrategy())+ " C:"+ Global.getCooperativeness(this.getStrategy())  + ", "+this.getDisplayText() + ", Type: "+ this.getConversationType()+ ", Mood: " + this.getMood() +", OtherMoodBelief: "+ this.getOtherMoodBelief();</Body>
+				</aor:Function>
+			</aor:ObjectType>
 		</EntityTypes>
 		<!-- =================================================== -->
 		<EnvironmentRules>
@@ -217,17 +326,122 @@
 					</UPDATE-ENV>
 				</DO>
 			</EnvironmentRule>
+
+						<!-- Calculate next action when needed -->
+			<aor:EnvironmentRule name="CalculateNextActionsRule">
+				<aor:ON-EACH-SIMULATION-STEP />
+				<aor:FOR-ObjectVariable variable="person" objectType="Person">
+					<aor:SelectionCondition language="Java JavaScript">this.person.needsActionCalculation</aor:SelectionCondition>
+				</aor:FOR-ObjectVariable>
+				<aor:FOR-ObjectVariable variable="action" objectType="ActionChoice">
+					<aor:SelectionCondition language="JavaScript"><![CDATA[this.person.getCharacter() === this.action.getCharacter() && this.person.calculateUtilityValue(this.action) >= this.person.getBestUtilityValue()]]></aor:SelectionCondition>
+				</aor:FOR-ObjectVariable>
+				<aor:DO>
+					<aor:UPDATE-ENV>
+						<aor:UpdateObject objectVariable="person">
+							<aor:Slot property="nextAction">
+								<aor:ObjectValueExpr objectVariable="action" />
+							</aor:Slot>
+							<aor:Slot property="needsActionCalculation" value="false" />
+						</aor:UpdateObject>
+					</aor:UPDATE-ENV>
+				</aor:DO>
+			</aor:EnvironmentRule>
 			<!-- =================================================== -->
 		</EnvironmentRules>
 		<!-- =================================================== -->
 	</SimulationModel>
 	<!-- =================================================== -->
 	<InitialState>
-		<GlobalVariable name="POLICE_ID" value="1" />
-		<GlobalVariable name="JUVENILE_ID" value="2" />
-		<Agent type="Police" name="Henk" id="1" objectVariable="police" />
-		<Agent type="Juvenile" name="Harry" id="2" objectVariable="juvenile" />
-		<CausedEvent occurrenceTime="1" type="AskInput"></CausedEvent>
+		<Agent type="Police" name="Henk" id="1" objectVariable="police">
+			<aor:Slot property="character" value="police"></aor:Slot>
+			<aor:Slot property="personalityStrategy" value="ConflictStrategy.COLLABORATING"></aor:Slot>
+			<aor:Slot property="activePursuitStrategy" value="ConflictStrategy.COMPETITIVE"></aor:Slot>
+			<aor:Slot property="receiverID">
+				<aor:GlobalVariableValueExpr variable="JUVENILE_ID" />
+			</aor:Slot>
+			
+		</Agent>
+		<Agent type="Juvenile" name="Harry" id="2" objectVariable="juvenile">
+			<aor:Slot property="character" value="juvenile"></aor:Slot>
+			<aor:Slot property="personalityStrategy" value="ConflictStrategy.ACCOMODATING"></aor:Slot>
+			<aor:Slot property="activePursuitStrategy" value="ConflictStrategy.AVOIDING"></aor:Slot>
+			<aor:Slot property="receiverID">
+				<aor:GlobalVariableValueExpr variable="POLICE_ID" />
+			</aor:Slot>
+			
+		</Agent>
+		<!-- =================================================== -->
+		<!-- ============== Actions Juvenile =================== -->
+		<aor:Object type="ActionChoice" name="jAction_1" id="21">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.AVOIDING" />
+			<aor:Slot property="displayText" value="We zullen zo weg gaan."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="0"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="0"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="jAction_2" id="22">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.ACCOMODATING" />
+			<aor:Slot property="displayText" value="Ja, natuurlijk."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="0"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="10"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="jAction_3" id="23">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COLLABORATING" />
+			<aor:Slot property="displayText" value="Wat is het probleem meneer?"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="0"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="10"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="jAction_4" id="24">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COMPETITIVE" />
+			<aor:Slot property="displayText" value="Hebben jullie niet iets beters te doen? Ga boeven vangen."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="0"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="-20"></aor:Slot> 
+		</aor:Object>
+		<!-- ============== Actions Police ==================== -->
+		<aor:Object type="ActionChoice" name="pAction_1" id="31">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.AVOIDING" />
+			<aor:Slot property="displayText" value="Kunnen jullie niet ergens anders heen gaan?"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="0"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="10"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_2" id="32">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.ACCOMODATING" />
+			<aor:Slot property="displayText" value="Kunnen we jullie ergens mee helpen?"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="0"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="10"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_3" id="33">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COLLABORATING" />
+			<aor:Slot property="displayText" value="Is het clubhuis niet een betere plek voor jullie?"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="0"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="0"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_4" id="34">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COMPETITIVE" />
+			<aor:Slot property="displayText" value="Horen jullie niet op school te zitten?"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="0"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="-20"></aor:Slot> 
+		</aor:Object>
+		<!-- =================================================== -->
+		<aor:CausedEvent occurrenceTime="1" type="StartSim"></aor:CausedEvent>
+		<aor:CausedEvent occurrenceTime="1" type="AskInput"></aor:CausedEvent>
+		<!-- =================================================== -->
 	</InitialState>
 	<!-- =================================================== -->
 	<UserInterface supportedLanguages="en">
@@ -237,20 +451,22 @@
 					<TwoDimensionalSpaceView2D backgroundColor="white" />
 				</SpaceView>
 				<!-- =================================================== -->
-				<ObjectView objectType="Juvenile" displayName="true">
+				<ObjectView objectType="Juvenile" displayName="true" >
 					<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+					
 					<Shape2D x="70%" y="50%">
 						<Rectangle texture="juvenile.png" positioning="CenterTop" height="30px" width="30px" />
 					</Shape2D>
 					<aor:DisplayInfo property="lastMessage" />
-				</ObjectView>
+				</ObjectView>		
 				<!-- =================================================== -->
 				<ObjectView objectType="Police" displayName="true">
 					<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 					<Shape2D x="30%" y="50%">
 						<Rectangle texture="agent.png" positioning="CenterTop" height="30px" width="30px"></Rectangle>
+						
 					</Shape2D>
-					<aor:DisplayInfo property="lastMessage"/>
+					<aor:DisplayInfo property="lastMessage" />
 				</ObjectView>
 			</Views>
 			<!-- =================================================== -->
@@ -277,18 +493,18 @@
 						</EventList>
 					</RightOutputPanel>
 					<!-- =================================================== -->
-					<MultiChoiceUserActionForm actionRuleParameter="msgContent"
-						actionRule="TellRule" positioning="CenterBottom" enabledWhenEventOfType="AskInput">
+					<MultiChoiceUserActionForm actionRuleParameter="inputChoice"
+						actionRule="ProcessInput" positioning="CenterBottom" enabledWhenEventOfType="AskInput">
+						
 						<Options>
-							<Option value="Ga weg" default="true">
+						
+							<Option value="31" default="true">
 								<Text>Ga weg</Text>
 							</Option>
-							<Option value="Hoi">
+							<Option value="32">
 								<Text>Hoi</Text>
 							</Option>
-							<Option value="Wat doe je hier?">
-								<Text>Wat doe je hier?</Text>
-							</Option>
+							
 						</Options>
 					</MultiChoiceUserActionForm>
 				</AgentControlByAgentType>
