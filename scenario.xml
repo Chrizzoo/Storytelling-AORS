@@ -25,6 +25,12 @@
 		<Globals>
 			<GlobalVariable name="POLICE_ID" dataType="Integer" initialValue="1" />
 			<GlobalVariable name="JUVENILE_ID" dataType="Integer" initialValue="2" />
+
+			<GlobalVariable name="USE_INPUT" dataType="Integer" initialValue="10" />
+			<GlobalVariable name="ONLY_PERSONALITY" dataType="Integer" initialValue="11" />
+			<GlobalVariable name="ONLY_COMPLEMENTING" dataType="Integer" initialValue="12" />
+			<GlobalVariable name="FULL_MODEL" dataType="Integer" initialValue="13" />
+			
 			<aor:GlobalVariable name="REACTION_DELAY" dataType="Integer" initialValue="30" />
 			<!-- ========================== -->
 			<GlobalVariable name="MessageLogString" dataType="String" initialValue=""></GlobalVariable>
@@ -106,6 +112,47 @@
 			   ]]>
 			   </aor:Body>
 			</aor:GlobalFunction>
+			<aor:GlobalFunction resultType="Integer" name="getStrategy">
+				<aor:Parameter name="assertiveness" type="Integer"/>
+				<aor:Parameter name="cooperativeness" type="Integer"/>
+			   <aor:Body language="Java JavaScript">
+			     <![CDATA[
+                  var result = ConflictStrategy.AVOIDING;
+                  
+				  if (assertiveness == 1) {
+				  	if (cooperativeness == 1) {
+				  		result = ConflictStrategy.COLLABORATING;
+				  	}
+				  	else {
+				  		result = ConflictStrategy.COMPETITIVE;
+				  	}
+				  }
+				  else if (assertiveness == 0 && cooperativeness == 1) {
+				  	result = ConflictStrategy.ACCOMODATING;
+				  }
+                  return result;
+			   ]]>
+			   </aor:Body>
+			</aor:GlobalFunction>
+			<aor:GlobalFunction resultType="Integer" name="getComplementingStrategy">
+				<aor:Parameter name="strategy" type="ConflictStrategy"/>
+			   <aor:Body language="Java JavaScript">
+			     <![CDATA[
+                  var result = ConflictStrategy.AVOIDING;
+                  
+				  if (strategy === ConflictStrategy.AVOIDING) {
+				  	  result = ConflictStrategy.COMPETITIVE;
+				  }
+				  else if (strategy === ConflictStrategy.COLLABORATING) {
+				  	 result = ConflictStrategy.ACCOMODATING;
+				  }
+				  else if (strategy === ConflictStrategy.ACCOMODATING) {
+				  	 result = ConflictStrategy.COLLABORATING;
+				  }
+                  return result;
+			   ]]>
+			   </aor:Body>
+			</aor:GlobalFunction>			
 		</Globals>
 		<!-- ========================== -->
 		<EntityTypes>
@@ -134,8 +181,18 @@
 			</ActionEventType>
 			<!-- ========================== -->
 			<AgentType memorySize="15" name="Person">
+			 
 				<Attribute name="character" type="String" />
+				
+				<!-- The settings the character uses: useInput, onlyPersonality, onlyComplementing, fulModel -->
+				<Attribute name="characterType" type="Integer" />
+				
+				<!-- The last message this character has sent -->
 				<Attribute name="lastMessage" type="String" initialValue="" />
+				
+				<!-- The last input Choice for a character that uses input mode -->
+				<aor:Attribute name="lastInputChoice" type="String" />
+				
 				<!-- whether or not the next action of the agent needs to be calculated -->
 				<Attribute name="needsActionCalculation" type="Boolean" initialValue="false" />
 				<Attribute name="actionNeeded" type="Boolean" initialValue="false" />
@@ -143,8 +200,6 @@
 				<!-- ========================== -->
 				
 				<!-- self -->
-				
-
 				<!-- the strategy that the character currently has -->
 				<aor:EnumerationProperty name="currentStrategy" type="ConflictStrategy" />
 				
@@ -192,18 +247,94 @@
 				<aor:Function resultType="Integer" name="calculateUtilityValue">
 					<aor:Parameter name="action" type="ActionChoice"/>
 					<aor:Body language="JavaScript">
-					<![CDATA[		
-						// WIP!
-							var util = action.getOtherMoodBelief();
-							simConsole.message("Utility: "+util);
-							simConsole.message("Action: "+action);
+					<![CDATA[							
+							var currentUtility = 0;
+							var charType = this.getCharacterType();
+
 							
-							if (util > this.getBestUtilityValue()) {
-								this.setBestUtilityValue(util);
-							
+							var comparePersonality = function(util, myStrategy, actionStrategy) {
+								var my_a =	Global.getAssertiveness(myStrategy);
+								var my_c =	Global.getCooperativeness(myStrategy);
+								var action_a = Global.getAssertiveness(actionStrategy);
+								var action_c = Global.getCooperativeness(actionStrategy);
+								if (my_a == action_a) {
+									util = util +5;
+								}
+								if (my_c == action_c) {
+									util = util +5;
+								}
+								return util;
 							}
+							
+							var complementingStrategy = function(util, otherStrategy, actionStrategy) {
+								var action_a = Global.getAssertiveness(actionStrategy);
+								var action_c = Global.getCooperativeness(actionStrategy);
+								var other_a = Global.getAssertiveness(otherStrategy);
+								var other_c = Global.getCooperativeness(otherStrategy);
+
+								if (other_a != action_a) {
+									util = util +5;
+								}
+								if (other_c == action_c) {
+									util = util +5;
+								}
+								
+								return util;
+							}
+							
+							var activePursuitStrategy = function(util, apsStrategy, actionStrategy) {
+								var action_a = Global.getAssertiveness(actionStrategy);
+								var action_c = Global.getCooperativeness(actionStrategy);
+								var my_aps_a = Global.getAssertiveness(apsStrategy);
+								var my_aps_c = Global.getCooperativeness(apsStrategy);
+
+								if (my_aps_a == action_a) {
+									util = util +5;
+								}
+								if (my_aps_c == action_c) {
+									util = util +5;
+								}
+								
+								return util;
+							}
+							
+							
+							if (charType == Global.ONLY_PERSONALITY) {						
+								currentUtility = comparePersonality(currentUtility, this.getPersonalityStrategy(), action.getStrategy());
+							}
+							else {
+								if (charType == Global.ONLY_COMPLEMENTING) {
+									currentUtility = complementingStrategy(currentUtility, this.getOtherAction().getStrategy(), action.getStrategy());
+
+								}
+								else if (charType == Global.FULL_MODEL) {
+									currentUtility = comparePersonality(currentUtility, this.getPersonalityStrategy(), action.getStrategy());
+									currentUtility = complementingStrategy(currentUtility, this.getOtherAction().getStrategy(), action.getStrategy());
+									currentUtility = activePursuitStrategy(currentUtility, this.getActivePursuitStrategy(), action.getStrategy());					
+								}
+							}
+							
+							var matchingMood = this.getCurrentMood() == action.getMood() ? 100 : 0;
+							currentUtility = currentUtility + matchingMood;
+							
+							simConsole.message("Utility: "+currentUtility);
+							simConsole.message("Action: "+action);
+								
+							if (currentUtility > this.getBestUtilityValue()) {
+								this.setBestUtilityValue(currentUtility);
+							}
+							simConsole.message("bestUtil: "+this.getBestUtilityValue());
 						
-						return util;
+						return currentUtility;
+					]]>	
+					</aor:Body>
+				</aor:Function>
+				<aor:Function resultType="Integer" name="testReachability">
+					<aor:Parameter name="message" type="String"/>
+					<aor:Body language="JavaScript">
+					<![CDATA[		
+						simConsole.message("Value: "+message);
+						return message;
 					]]>	
 					</aor:Body>
 				</aor:Function>
@@ -243,26 +374,20 @@
 					</aor:THEN>
 				</aor:ReactionRule>
 				<!-- =========== --> 
-				<ReactionRule name="UseIncomingMessage" agentVariable="agt">
-					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
-					<aor:DO>
-						 <aor:UPDATE-AGT>
-						 	<aor:Call contextObjectVariable="agt" procedure="ProcessIncomingMessage">
-						 		<aor:Argument parameter="message"><aor:ValueExpr language="Java JavaScript">this.msg</aor:ValueExpr></aor:Argument>
-						 	</aor:Call>
-						</aor:UPDATE-AGT>
-					</aor:DO>
-				</ReactionRule>
-				<!-- ========================== -->
-				
+				<!-- ========================== -->			
+
 			</AgentType>
 			<!-- ==================================== -->
 			<AgentType memorySize="15" name="Police" superType="Person">
-				<aor:Attribute name="lastInputChoice" type="String" />
 				<ReactionRule name="AskInputForPolice" agentVariable="agt">
 					<WHEN eventType="InMessageEvent" eventVariable="evtVar" messageType="Tell"
 						messageVariable="msg" />
 					<DO>
+						<aor:UPDATE-AGT>
+							<aor:Call contextObjectVariable="agt" procedure="ProcessIncomingMessage">
+						 		<aor:Argument parameter="message"><aor:ValueExpr language="Java JavaScript">this.msg</aor:ValueExpr></aor:Argument>
+						 </aor:Call>
+						</aor:UPDATE-AGT>
 						<SCHEDULE-EVT>
 							<ActionEventExpr actionEventType="AskInput">
 								<aor:Delay>
@@ -270,10 +395,9 @@
 								</aor:Delay>
 							</ActionEventExpr>
 						</SCHEDULE-EVT>
+						
 					</DO>
 				</ReactionRule>
-				<!-- -->
-				<!-- ========================== -->
 				<ActionRule name="ProcessInput" agentVariable="agt">
 					<RuleParameter name="inputChoice" type="String" />
 					<DO>
@@ -287,19 +411,21 @@
 					</DO>
 				</ActionRule>
 			</AgentType>
-			<!-- ========================== -->
 			<AgentType memorySize="15" name="Juvenile" superType="Person" >
-				<!-- =================================================== -->
-				<ReactionRule name="ReceiveMessage" agentVariable="agt">
+					<ReactionRule name="UseIncomingMessage" agentVariable="agt">
 					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
 					<aor:DO>
 						 <aor:UPDATE-AGT>
-						<aor:Slot property="actionNeeded" value="true" />
+						 	<aor:Slot property="actionNeeded" value="true" />
 							<aor:Slot property="needsActionCalculation" value="true" />
+							<aor:Call contextObjectVariable="agt" procedure="ProcessIncomingMessage">
+						 		<aor:Argument parameter="message"><aor:ValueExpr language="Java JavaScript">this.msg</aor:ValueExpr></aor:Argument>
+						 	</aor:Call>
 						</aor:UPDATE-AGT>
 					</aor:DO>
 				</ReactionRule>
 			</AgentType>
+			
 			<!-- =================================================== -->
 			<aor:ObjectType name="ActionChoice">
 				<aor:Attribute name="character" type="String" />
@@ -326,21 +452,41 @@
 					</UPDATE-ENV>
 				</DO>
 			</EnvironmentRule>
-
-						<!-- Calculate next action when needed -->
-			<aor:EnvironmentRule name="CalculateNextActionsRule">
+			
+			<!-- Calculate next action for each juvenile when needed -->
+			<aor:EnvironmentRule name="CalculateJuvenilesNextActionsRule">
 				<aor:ON-EACH-SIMULATION-STEP />
-				<aor:FOR-ObjectVariable variable="person" objectType="Person">
-					<aor:SelectionCondition language="Java JavaScript">this.person.needsActionCalculation</aor:SelectionCondition>
+				<aor:FOR-ObjectVariable variable="juvenile" objectType="Juvenile">
+					<aor:SelectionCondition language="Java JavaScript">this.juvenile.needsActionCalculation</aor:SelectionCondition>
 				</aor:FOR-ObjectVariable>
-				<aor:FOR-ObjectVariable variable="action" objectType="ActionChoice">
-					<aor:SelectionCondition language="JavaScript"><![CDATA[this.person.getCharacter() === this.action.getCharacter() && this.person.calculateUtilityValue(this.action) >= this.person.getBestUtilityValue()]]></aor:SelectionCondition>
+				<aor:FOR-ObjectVariable variable="actionChoice" objectType="ActionChoice">
+					<aor:SelectionCondition language="JavaScript"><![CDATA[this.juvenile.getCharacter() === this.actionChoice.getCharacter() && this.juvenile.calculateUtilityValue(this.actionChoice) >= this.juvenile.getBestUtilityValue()]]></aor:SelectionCondition>
 				</aor:FOR-ObjectVariable>
 				<aor:DO>
 					<aor:UPDATE-ENV>
-						<aor:UpdateObject objectVariable="person">
+						<aor:UpdateObject objectVariable="juvenile">
 							<aor:Slot property="nextAction">
-								<aor:ObjectValueExpr objectVariable="action" />
+								<aor:ObjectValueExpr objectVariable="actionChoice" />
+							</aor:Slot>
+							<aor:Slot property="needsActionCalculation" value="false" />
+						</aor:UpdateObject>
+					</aor:UPDATE-ENV>
+				</aor:DO>
+			</aor:EnvironmentRule>
+			<!-- Calculate next action for each juvenile when needed -->
+			<aor:EnvironmentRule name="CalculatePoliceNextActionsRule">
+				<aor:ON-EACH-SIMULATION-STEP />
+				<aor:FOR-ObjectVariable variable="police" objectType="Police">
+					<aor:SelectionCondition language="Java JavaScript">this.police.needsActionCalculation</aor:SelectionCondition>
+				</aor:FOR-ObjectVariable>
+				<aor:FOR-ObjectVariable variable="actionChoice" objectType="ActionChoice">
+					<aor:ObjectIdRef language="Java JavaScript"><![CDATA[(this.police === null)? 0 : this.police.getLastInputChoice()]]></aor:ObjectIdRef>
+				</aor:FOR-ObjectVariable>
+				<aor:DO>
+					<aor:UPDATE-ENV>
+						<aor:UpdateObject objectVariable="police">
+							<aor:Slot property="nextAction">
+								<aor:ObjectValueExpr objectVariable="actionChoice" />
 							</aor:Slot>
 							<aor:Slot property="needsActionCalculation" value="false" />
 						</aor:UpdateObject>
@@ -355,8 +501,11 @@
 	<InitialState>
 		<Agent type="Police" name="Henk" id="1" objectVariable="police">
 			<aor:Slot property="character" value="police"></aor:Slot>
+			<aor:Slot property="characterType">
+				<aor:GlobalVariableValueExpr variable="USE_INPUT" />
+			</aor:Slot>
 			<aor:Slot property="personalityStrategy" value="ConflictStrategy.COLLABORATING"></aor:Slot>
-			<aor:Slot property="activePursuitStrategy" value="ConflictStrategy.COMPETITIVE"></aor:Slot>
+			<aor:Slot property="activePursuitStrategy" value="ConflictStrategy.AVOIDING"></aor:Slot>
 			<aor:Slot property="receiverID">
 				<aor:GlobalVariableValueExpr variable="JUVENILE_ID" />
 			</aor:Slot>
@@ -364,8 +513,11 @@
 		</Agent>
 		<Agent type="Juvenile" name="Harry" id="2" objectVariable="juvenile">
 			<aor:Slot property="character" value="juvenile"></aor:Slot>
+			<aor:Slot property="characterType">
+				<aor:GlobalVariableValueExpr variable="FULL_MODEL" />
+			</aor:Slot>
 			<aor:Slot property="personalityStrategy" value="ConflictStrategy.ACCOMODATING"></aor:Slot>
-			<aor:Slot property="activePursuitStrategy" value="ConflictStrategy.AVOIDING"></aor:Slot>
+			<aor:Slot property="activePursuitStrategy" value="ConflictStrategy.COMPETITIVE"></aor:Slot>
 			<aor:Slot property="receiverID">
 				<aor:GlobalVariableValueExpr variable="POLICE_ID" />
 			</aor:Slot>
@@ -471,8 +623,7 @@
 			</Views>
 			<!-- =================================================== -->
 			<AgentControlUI waitForUserInput="true" initiallyPlayedAgent="Henk">
-				<AgentControlByAgentType cssFile="https://github.com/Chrizzoo/Storytelling-AORS/blob/master/custom.css"
-					type="Police">
+				<AgentControlByAgentType type="Police">
 					<!-- =================================================== -->
 					<TopOutputPanel>
 						<OutputFieldGroup>
@@ -497,14 +648,18 @@
 						actionRule="ProcessInput" positioning="CenterBottom" enabledWhenEventOfType="AskInput">
 						
 						<Options>
-						
 							<Option value="31" default="true">
-								<Text>Ga weg</Text>
+								<Text>Kunnen jullie niet ergens anders heen gaan?</Text>
 							</Option>
 							<Option value="32">
-								<Text>Hoi</Text>
+								<Text>Kunnen we jullie ergens mee helpen?</Text>
 							</Option>
-							
+							<Option value="33">
+								<Text>Is het clubhuis niet een betere plek voor jullie?</Text>
+							</Option>
+							<Option value="34">
+								<Text>Horen jullie niet op school te zitten?</Text>
+							</Option>
 						</Options>
 					</MultiChoiceUserActionForm>
 				</AgentControlByAgentType>
