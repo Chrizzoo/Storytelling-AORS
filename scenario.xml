@@ -36,6 +36,7 @@
 			<GlobalVariable name="MessageLogString" dataType="String" initialValue=""></GlobalVariable>
 			<!-- ========================== -->
 			<GlobalFunction resultType="String" name="getAppendedLog">
+				<aor:documentation>Append the message to the messagelog. Print the message in the simconsole. Return the last 100 characters.</aor:documentation>
 				<Parameter name="message" type="String" />
 				<Body language="Java">
 				string result = Global.MessageLogString + "; " + message;
@@ -112,28 +113,6 @@
 			   ]]>
 			   </aor:Body>
 			</aor:GlobalFunction>
-			<aor:GlobalFunction resultType="Integer" name="getStrategy">
-				<aor:Parameter name="assertiveness" type="Integer"/>
-				<aor:Parameter name="cooperativeness" type="Integer"/>
-			   <aor:Body language="Java JavaScript">
-			     <![CDATA[
-                  var result = ConflictStrategy.AVOIDING;
-                  
-				  if (assertiveness == 1) {
-				  	if (cooperativeness == 1) {
-				  		result = ConflictStrategy.COLLABORATING;
-				  	}
-				  	else {
-				  		result = ConflictStrategy.COMPETITIVE;
-				  	}
-				  }
-				  else if (assertiveness == 0 && cooperativeness == 1) {
-				  	result = ConflictStrategy.ACCOMODATING;
-				  }
-                  return result;
-			   ]]>
-			   </aor:Body>
-			</aor:GlobalFunction>
 			<aor:GlobalFunction resultType="Integer" name="getComplementingStrategy">
 				<aor:Parameter name="strategy" type="ConflictStrategy"/>
 			   <aor:Body language="Java JavaScript">
@@ -158,6 +137,9 @@
 		<EntityTypes>
 			<!-- ========================== -->
 			<MessageType name="Tell">
+				<aor:documentation>
+				Message that contains a reference to the person that sends it and the action that it choose.
+				</aor:documentation>
 				<aor:ReferenceProperty name="sender" type="Person" />
 				<aor:ReferenceProperty name="choosenAction" type="ActionChoice" />
 				<!-- ========================== -->
@@ -175,12 +157,13 @@
 			<CausedEventType name="StartSim" />
 			<!-- ========================== -->
 			<CausedEventType name="AskInput" />
+
 			<!-- ========================== -->
 			<ActionEventType name="AddLogMessage">
 				<Attribute name="msg" type="String" />
 			</ActionEventType>
 			<!-- ========================== -->
-			<AgentType memorySize="15" name="Person">
+			<AgentType memorySize="25" name="Person">
 			 
 				<Attribute name="character" type="String" />
 				
@@ -225,15 +208,22 @@
 				<aor:Function resultType="Integer" name="ProcessIncomingMessage"  >
 					<aor:Parameter name="message" type="Message"/>
 					<aor:Body language="Java JavaScript">
-					<![CDATA[		
+					<![CDATA[
+					
+						// reset best utility for the respons action that will be chosen.	
+						this.setBestUtilityValue(0); 
+					
 						this.setOtherAction(message.choosenAction);
 						this.setOtherStrategy(this.getOtherAction().getStrategy());
 						
 						/* Change the Mood acording to the action of the other! */
 						this.setCurrentMood(this.getCurrentMood() + this.getOtherAction().getOtherMoodBelief());
 						
+						// update the message for the mood.
+						var nextAction = this.getNextAction();
+						this.setLastMessage(nextAction == null ? "": nextAction.getDisplayText() + " ( Mood: "+ this.getCurrentMood() + " )");
 						
-						/* Some Debug outputs */					
+						/* Some Debug outputs					
 						simConsole.message(this.getOtherAction().toString());
 						simConsole.message("my A: "+Global.getAssertiveness(this.getCurrentStrategy()));
 						simConsole.message("my C: "+Global.getCooperativeness(this.getCurrentStrategy()));
@@ -241,6 +231,7 @@
 						simConsole.message("his A: "+Global.getAssertiveness(this.getOtherStrategy()));
 						simConsole.message("his C: "+Global.getCooperativeness(this.getOtherStrategy()));
 						simConsole.message(this.getName()+" :"+this.getCurrentMood());
+						*/
 						]]>	
 					</aor:Body>
 				</aor:Function>
@@ -314,27 +305,81 @@
 								}
 							}
 							
-							var matchingMood = this.getCurrentMood() == action.getMood() ? 100 : 0;
-							currentUtility = currentUtility + matchingMood;
+							//var matchingMood = this.getCurrentMood() == action.getMood() ? 100 : 0;
+							//currentUtility = currentUtility + matchingMood;
 							
-							simConsole.message("Utility: "+currentUtility);
-							simConsole.message("Action: "+action);
+							var differenceFunc = function foo(num1, num2){
+ 								return (num1 > num2)? num1-num2 : num2-num1
+							}
+							
+							currentUtility = currentUtility + 200 - differenceFunc(action.getMood(), this.getCurrentMood());
+							
+							
+
 								
 							if (currentUtility > this.getBestUtilityValue()) {
 								this.setBestUtilityValue(currentUtility);
 							}
+							
+							/* Some debug outputs
+							simConsole.message("Utility: "+currentUtility);
+							simConsole.message("Action: "+action);	
 							simConsole.message("bestUtil: "+this.getBestUtilityValue());
+							*/
 						
 						return currentUtility;
 					]]>	
 					</aor:Body>
 				</aor:Function>
-				<aor:Function resultType="Integer" name="testReachability">
-					<aor:Parameter name="message" type="String"/>
+				<aor:Function resultType="Integer" name="selectFittingAction" >
+				<aor:Parameter name="strategy" type="String"/>
 					<aor:Body language="JavaScript">
-					<![CDATA[		
-						simConsole.message("Value: "+message);
-						return message;
+					<![CDATA[					      
+					      var selectedStrategy = 0;
+		                  switch(parseInt(strategy)) {
+		                      case(1): {   
+		                      		selectedStrategy =  ConflictStrategy.COMPETITIVE
+		                          	break;
+		                      }
+		                      case(2): {
+		                         	selectedStrategy = ConflictStrategy.AVOIDING
+		                         	break;
+		                      }
+		                      case(3): {
+		                          	selectedStrategy =  ConflictStrategy.COLLABORATING
+		                          	break;
+		                      }
+		                      default: {
+		                      	selectedStrategy = ConflictStrategy.ACCOMODATING;
+		                      	break;}
+		                  }
+		                  
+						var myMood = this.getCurrentMood();
+						var myCharacter = this.getCharacter();
+						
+						bestAction = 0;
+						bestUtility = 0;
+						
+						var differenceFunc = function foo(num1, num2){
+ 							 return (num1 > num2)? num1-num2 : num2-num1
+						}
+						
+						var possibleActions = Simulator.envSim.getObjectsByType("ActionChoice");
+						var size = possibleActions.size();
+						for (var i = 0; i < size ; i++) {
+							var action = possibleActions.get(i);
+							if (action.getCharacter() == myCharacter) {
+								if (action.getStrategy() == selectedStrategy) {
+									util = 200 - differenceFunc(action.getMood(), myMood);
+									if (util > bestUtility) {
+										bestAction = action.getId();
+										bestUtility = util;
+									}
+								}
+							}
+							
+						}	
+						return bestAction;
 					]]>	
 					</aor:Body>
 				</aor:Function>
@@ -348,7 +393,7 @@
 						<aor:UPDATE-AGT>
 							<aor:Slot property="actionNeeded" value="false" />
 							<aor:Slot property="lastMessage">
-								<aor:ValueExpr language="Java JavaScript">this.agt.getNextAction().getDisplayText()</aor:ValueExpr>
+								<aor:ValueExpr language="Java JavaScript">this.agt.getNextAction().getDisplayText() + " ( Mood: "+ this.agt.getCurrentMood() + " )"</aor:ValueExpr>
 							</aor:Slot>
 						</aor:UPDATE-AGT>
 						<SCHEDULE-EVT>
@@ -378,7 +423,7 @@
 
 			</AgentType>
 			<!-- ==================================== -->
-			<AgentType memorySize="15" name="Police" superType="Person">
+			<AgentType memorySize="20" name="Police" superType="Person">
 				<ReactionRule name="AskInputForPolice" agentVariable="agt">
 					<WHEN eventType="InMessageEvent" eventVariable="evtVar" messageType="Tell"
 						messageVariable="msg" />
@@ -410,8 +455,10 @@
 						</UPDATE-AGT>
 					</DO>
 				</ActionRule>
+				
+
 			</AgentType>
-			<AgentType memorySize="15" name="Juvenile" superType="Person" >
+			<AgentType memorySize="20" name="Juvenile" superType="Person" >
 					<ReactionRule name="UseIncomingMessage" agentVariable="agt">
 					<WHEN eventType="InMessageEvent" eventVariable="evt" messageType="Tell" messageVariable="msg" />
 					<aor:DO>
@@ -476,11 +523,12 @@
 			<!-- Calculate next action for each juvenile when needed -->
 			<aor:EnvironmentRule name="CalculatePoliceNextActionsRule">
 				<aor:ON-EACH-SIMULATION-STEP />
+				
 				<aor:FOR-ObjectVariable variable="police" objectType="Police">
 					<aor:SelectionCondition language="Java JavaScript">this.police.needsActionCalculation</aor:SelectionCondition>
 				</aor:FOR-ObjectVariable>
 				<aor:FOR-ObjectVariable variable="actionChoice" objectType="ActionChoice">
-					<aor:ObjectIdRef language="Java JavaScript"><![CDATA[(this.police === null)? 0 : this.police.getLastInputChoice()]]></aor:ObjectIdRef>
+					<aor:ObjectIdRef language="Java JavaScript"><![CDATA[(this.police === null)? 0 : this.police.selectFittingAction(this.police.getLastInputChoice())]]></aor:ObjectIdRef>
 				</aor:FOR-ObjectVariable>
 				<aor:DO>
 					<aor:UPDATE-ENV>
@@ -525,13 +573,15 @@
 		</Agent>
 		<!-- =================================================== -->
 		<!-- ============== Actions Juvenile =================== -->
+		
+		<!-- ============== Neutral Juvenile =================== -->
 		<aor:Object type="ActionChoice" name="jAction_1" id="21">
 			<aor:Slot property="character" value="juvenile" />
 			<aor:Slot property="strategy" value="ConflictStrategy.AVOIDING" />
 			<aor:Slot property="displayText" value="We zullen zo weg gaan."></aor:Slot>
 			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
 			<aor:Slot property="mood" value="0"></aor:Slot>
-			<aor:Slot property="otherMoodBelief" value="0"></aor:Slot> 
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
 		</aor:Object>
 		<aor:Object type="ActionChoice" name="jAction_2" id="22">
 			<aor:Slot property="character" value="juvenile" />
@@ -539,7 +589,7 @@
 			<aor:Slot property="displayText" value="Ja, natuurlijk."></aor:Slot>
 			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
 			<aor:Slot property="mood" value="0"></aor:Slot>
-			<aor:Slot property="otherMoodBelief" value="10"></aor:Slot> 
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
 		</aor:Object>
 		<aor:Object type="ActionChoice" name="jAction_3" id="23">
 			<aor:Slot property="character" value="juvenile" />
@@ -547,7 +597,7 @@
 			<aor:Slot property="displayText" value="Wat is het probleem meneer?"></aor:Slot>
 			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
 			<aor:Slot property="mood" value="0"></aor:Slot>
-			<aor:Slot property="otherMoodBelief" value="10"></aor:Slot> 
+			<aor:Slot property="otherMoodBelief" value="0"></aor:Slot> 
 		</aor:Object>
 		<aor:Object type="ActionChoice" name="jAction_4" id="24">
 			<aor:Slot property="character" value="juvenile" />
@@ -555,10 +605,82 @@
 			<aor:Slot property="displayText" value="Hebben jullie niet iets beters te doen? Ga boeven vangen."></aor:Slot>
 			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
 			<aor:Slot property="mood" value="0"></aor:Slot>
-			<aor:Slot property="otherMoodBelief" value="-20"></aor:Slot> 
+			<aor:Slot property="otherMoodBelief" value="-25"></aor:Slot> 
 		</aor:Object>
+		
+		<!-- ============== Positive Juvenile =================== -->
+		<aor:Object type="ActionChoice" name="jAction_5" id="25">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.AVOIDING" />
+			<aor:Slot property="displayText" value="We zullen zo weg zijn en jullie zullen niks meer van ons horen."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="jAction_6" id="26">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.ACCOMODATING" />
+			<aor:Slot property="displayText" value="We zullen het niet meer doen."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="0"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="jAction_7" id="27">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COLLABORATING" />
+			<aor:Slot property="displayText" value="We zullen de schade betalen."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="jAction_8" id="28">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COMPETITIVE" />
+			<aor:Slot property="displayText" value="Jullie moeten toch ook wat te doen hebben tijdens het werk."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="-25"></aor:Slot> 
+		</aor:Object>
+		
+		<!-- ============== Negative Juvenile =================== -->
+		<aor:Object type="ActionChoice" name="jAction_9" id="29">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.AVOIDING" />
+			<aor:Slot property="displayText" value="Begint weg te rennen."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="jAction_10" id="30">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.ACCOMODATING" />
+			<aor:Slot property="displayText" value="'Hij was het!' Wijst een persoon in de eigen groep aan."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="jAction_11" id="31">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COLLABORATING" />
+			<aor:Slot property="displayText" value="Als je nu weg gaat zullen we je niet in elkaar slaan."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="-25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="jAction_12" id="32">
+			<aor:Slot property="character" value="juvenile" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COMPETITIVE" />
+			<aor:Slot property="displayText" value="Trek mes. 'Laat ons met rust of ik steek je neer!'"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="-25"></aor:Slot> 
+		</aor:Object>		
+		
+		
 		<!-- ============== Actions Police ==================== -->
-		<aor:Object type="ActionChoice" name="pAction_1" id="31">
+		
+		<!-- ============== Neutral Police ==================== -->
+		<aor:Object type="ActionChoice" name="pAction_1" id="81">
 			<aor:Slot property="character" value="police" />
 			<aor:Slot property="strategy" value="ConflictStrategy.AVOIDING" />
 			<aor:Slot property="displayText" value="Kunnen jullie niet ergens anders heen gaan?"></aor:Slot>
@@ -566,7 +688,7 @@
 			<aor:Slot property="mood" value="0"></aor:Slot>
 			<aor:Slot property="otherMoodBelief" value="10"></aor:Slot> 
 		</aor:Object>
-		<aor:Object type="ActionChoice" name="pAction_2" id="32">
+		<aor:Object type="ActionChoice" name="pAction_2" id="82">
 			<aor:Slot property="character" value="police" />
 			<aor:Slot property="strategy" value="ConflictStrategy.ACCOMODATING" />
 			<aor:Slot property="displayText" value="Kunnen we jullie ergens mee helpen?"></aor:Slot>
@@ -574,7 +696,7 @@
 			<aor:Slot property="mood" value="0"></aor:Slot>
 			<aor:Slot property="otherMoodBelief" value="10"></aor:Slot> 
 		</aor:Object>
-		<aor:Object type="ActionChoice" name="pAction_3" id="33">
+		<aor:Object type="ActionChoice" name="pAction_3" id="83">
 			<aor:Slot property="character" value="police" />
 			<aor:Slot property="strategy" value="ConflictStrategy.COLLABORATING" />
 			<aor:Slot property="displayText" value="Is het clubhuis niet een betere plek voor jullie?"></aor:Slot>
@@ -582,7 +704,7 @@
 			<aor:Slot property="mood" value="0"></aor:Slot>
 			<aor:Slot property="otherMoodBelief" value="0"></aor:Slot> 
 		</aor:Object>
-		<aor:Object type="ActionChoice" name="pAction_4" id="34">
+		<aor:Object type="ActionChoice" name="pAction_4" id="84">
 			<aor:Slot property="character" value="police" />
 			<aor:Slot property="strategy" value="ConflictStrategy.COMPETITIVE" />
 			<aor:Slot property="displayText" value="Horen jullie niet op school te zitten?"></aor:Slot>
@@ -590,6 +712,111 @@
 			<aor:Slot property="mood" value="0"></aor:Slot>
 			<aor:Slot property="otherMoodBelief" value="-20"></aor:Slot> 
 		</aor:Object>
+		
+		<!-- ============== mildy Positive Police ==================== -->
+		<aor:Object type="ActionChoice" name="pAction_5" id="85">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.AVOIDING" />
+			<aor:Slot property="displayText" value="Moeten we later terugkomen om te controleren of jullie weg zijn?"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="25"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+			<aor:Object type="ActionChoice" name="pAction_6" id="86">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COLLABORATING" />
+			<aor:Slot property="displayText" value="We zijn gestuurd omdat er klachten zijn."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="25"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="0"></aor:Slot> 
+		</aor:Object>
+		
+		<!-- ============== mildy Negative Police ==================== -->
+		<aor:Object type="ActionChoice" name="pAction_7" id="87">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.ACCOMODATING" />
+			<aor:Slot property="displayText" value="We willen jullie vriendelijk vragen te stoppen."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-25"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="0"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_8" id="88">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COMPETITIVE" />
+			<aor:Slot property="displayText" value="Linker Hand op handboeien, rechter op pistool. 'Wat gaan jullie doen?'"></aor:Slot>
+			<aor:Slot property="conversationType" value="non-verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-25"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+
+		<!-- ============== Positive Police ==================== -->
+		<aor:Object type="ActionChoice" name="pAction_9" id="89">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.AVOIDING" />
+			<aor:Slot property="displayText" value="We houden het bij een waarschuwing"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_10" id="90">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.ACCOMODATING" />
+			<aor:Slot property="displayText" value="Jullie kunnen gaan."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_11" id="91">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COLLABORATING" />
+			<aor:Slot property="displayText" value="Jullie krijgen de rekening nog wel!"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="-25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_12" id="92">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COMPETITIVE" />
+			<aor:Slot property="displayText" value="Helaas bepalen jullie hier niet de regels."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="-25"></aor:Slot> 
+		</aor:Object>
+
+		<!-- ============== Negative Police ==================== -->
+		<aor:Object type="ActionChoice" name="pAction_13" id="93">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.AVOIDING" />
+			<aor:Slot property="displayText" value="Neemt een paar stappen terug. 'We zullen jullie wat ruimte geven.'"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_14" id="94">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.ACCOMODATING" />
+			<aor:Slot property="displayText" value="Meekomen naar het politiebureau jij. De rest kan gaan."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="-25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_15" id="95">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COLLABORATING" />
+			<aor:Slot property="displayText" value="Stop! We willen niet met jullie vechten."></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="25"></aor:Slot> 
+		</aor:Object>
+		<aor:Object type="ActionChoice" name="pAction_16" id="96">
+			<aor:Slot property="character" value="police" />
+			<aor:Slot property="strategy" value="ConflictStrategy.COMPETITIVE" />
+			<aor:Slot property="displayText" value="Trek het pistool. 'Handen omhoog!'"></aor:Slot>
+			<aor:Slot property="conversationType" value="verbal"></aor:Slot>
+			<aor:Slot property="mood" value="-50"></aor:Slot>
+			<aor:Slot property="otherMoodBelief" value="-25"></aor:Slot> 
+		</aor:Object>
+		
 		<!-- =================================================== -->
 		<aor:CausedEvent occurrenceTime="1" type="StartSim"></aor:CausedEvent>
 		<aor:CausedEvent occurrenceTime="1" type="AskInput"></aor:CausedEvent>
@@ -597,6 +824,20 @@
 	</InitialState>
 	<!-- =================================================== -->
 	<UserInterface supportedLanguages="en">
+	
+	<aor:InitialStateUI>
+	<aor:AgentUI agentType="Juvenile">
+		<aor:PropertyUI property="characterType" />
+		<aor:PropertyUI property="personalityStrategy" />
+		<aor:PropertyUI property="activePursuitStrategy" />
+	</aor:AgentUI>
+	<aor:AgentUI agentType="Police">
+		<aor:PropertyUI property="characterType" />
+		<aor:PropertyUI property="personalityStrategy" />
+		<aor:PropertyUI property="activePursuitStrategy" />
+	</aor:AgentUI>
+	</aor:InitialStateUI>
+	
 		<AnimationUI>
 			<Views>
 				<SpaceView canvasColor="darkgrey">
@@ -644,21 +885,21 @@
 						</EventList>
 					</RightOutputPanel>
 					<!-- =================================================== -->
+					
 					<MultiChoiceUserActionForm actionRuleParameter="inputChoice"
 						actionRule="ProcessInput" positioning="CenterBottom" enabledWhenEventOfType="AskInput">
-						
 						<Options>
-							<Option value="31" default="true">
-								<Text>Kunnen jullie niet ergens anders heen gaan?</Text>
+							<Option value="1" default="true">
+								<Text>Concurrerende actie</Text>
 							</Option>
-							<Option value="32">
-								<Text>Kunnen we jullie ergens mee helpen?</Text>
+							<Option value="2">
+								<Text>Ontwijkende actien</Text>
 							</Option>
-							<Option value="33">
-								<Text>Is het clubhuis niet een betere plek voor jullie?</Text>
+							<Option value="3">
+								<Text>Samenwerkende actie</Text>
 							</Option>
-							<Option value="34">
-								<Text>Horen jullie niet op school te zitten?</Text>
+							<Option value="4">
+								<Text>meegaande actie</Text>
 							</Option>
 						</Options>
 					</MultiChoiceUserActionForm>
